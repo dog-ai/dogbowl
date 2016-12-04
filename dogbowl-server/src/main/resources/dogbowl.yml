@@ -1,0 +1,32 @@
+server:
+  applicationConnectors:
+  - type: http
+    port: 9090
+  adminConnectors:
+  - type: http
+    port: 9091
+
+logging:
+  level: INFO
+  loggers:
+    "io.dropwizard": ERROR
+    "org.eclipse.jetty": ERROR
+  appenders:
+    - type: console
+      threshold: INFO
+      target: stdout
+    - type: rollbar
+      apiKey: ${ROLLBAR_API_KEY}
+      environment: ${DOGBOWL_ENVIRONMENT}
+      threshold: ERROR
+
+firebase:
+  apiKey: ${FIREBASE_API_KEY}
+  url: https://${FIREBASE_PROJECT_ID}.firebaseio.com
+
+spark:
+  masterHost: ${SPARK_MASTER_HOST}
+
+hdfs:
+  url: ${HDFS_URL}
+  user: root
