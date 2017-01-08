@@ -11,10 +11,13 @@ logging:
   loggers:
     "io.dropwizard": ERROR
     "org.eclipse.jetty": ERROR
+    "org.apache.hadoop": ERROR
+    "com.firebase.client": ERROR
   appenders:
     - type: console
       threshold: INFO
       target: stdout
+      logFormat: "%-5level [%date{ISO8601}] %logger{0}: %msg%n"
     - type: rollbar
       apiKey: ${ROLLBAR_API_KEY}
       environment: ${DOGBOWL_ENVIRONMENT}
