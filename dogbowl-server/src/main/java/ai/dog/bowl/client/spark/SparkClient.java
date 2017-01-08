@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016, Hugo Freire <hugo@dog.ai>. All rights reserved.
+ * Copyright (C) 2017, Hugo Freire <hugo@dog.ai>. All rights reserved.
  */
 
 package ai.dog.bowl.client.spark;
@@ -28,15 +28,13 @@ public class SparkClient implements Managed {
 
   private final String masterHost;
   private final String resourceUrl;
-
-  private SparkRestClient sparkRestClient;
-
   private final Map<String, String> environmentVariables = new HashMap<String, String>() {{
     put("DOGBOWL_ENVIRONMENT", System.getenv("DOGBOWL_ENVIRONMENT"));
     put("ROLLBAR_API_KEY", System.getenv("ROLLBAR_API_KEY"));
     put("FIREBASE_PROJECT_ID", System.getenv("FIREBASE_PROJECT_ID"));
     put("FIREBASE_API_KEY", System.getenv("FIREBASE_API_KEY"));
   }};
+  private SparkRestClient sparkRestClient;
 
   public SparkClient(String masterHost, String resourceUrl) {
     this.masterHost = masterHost;
@@ -118,9 +116,11 @@ public class SparkClient implements Managed {
         try {
           sparkRestClient.killJob()
                   .withSubmissionId(submissionId);
-        } catch (FailedSparkRequestException ignored) {}
 
-        return DriverState.UNKNOWN.toString();
+          return DriverState.KILLED.toString();
+        } catch (FailedSparkRequestException ignored) {
+          return DriverState.UNKNOWN.toString();
+        }
       }
     });
   }

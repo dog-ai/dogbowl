@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016, Hugo Freire <hugo@dog.ai>. All rights reserved.
+ * Copyright (C) 2017, Hugo Freire <hugo@dog.ai>. All rights reserved.
  */
 
 package ai.dog.bowl.client.hdfs;
@@ -12,6 +12,8 @@ import org.apache.hadoop.fs.Path;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import sun.plugin.dom.exception.InvalidStateException;
+
 import java.io.InputStream;
 import java.io.OutputStream;
 
@@ -20,9 +22,8 @@ import io.dropwizard.lifecycle.Managed;
 public class HDFSClient implements Managed {
   private static final Logger logger = LoggerFactory.getLogger(HDFSClient.class);
 
-  private static final String JAR_FILENAME = "dogbowl-spark.jar";
-
   private final String url;
+  private FileSystem hdfs;
 
   public HDFSClient(String url, String user) {
     this.url = url;
@@ -37,21 +38,35 @@ public class HDFSClient implements Managed {
     configuration.set("dfs.client.use.datanode.hostname", "true");
     configuration.set("dfs.replication", "1");
 
-    FileSystem hdfs = FileSystem.get(configuration);
-    Path file = new Path(url + "/.tmp/spark/" + JAR_FILENAME);
+    hdfs = FileSystem.get(configuration);
+  }
+
+  @Override
+  public void stop() throws Exception {
+    hdfs = null;
+  }
+
+  public void uploadJar(String jar, String dest) throws Exception {
+    if (hdfs == null) {
+      throw new InvalidStateException("HDFS client has not been started");
+    }
+
+    logger.info("Uploading " + jar + " to " + url + dest);
+    Path file = new Path(url + dest);
 
     if (hdfs.exists(file)) {
       hdfs.delete(file, true);
     }
 
     OutputStream os = hdfs.create(file);
-    InputStream is = this.getClass().getClassLoader().getResourceAsStream(JAR_FILENAME);
+
+    InputStream is = this.getClass().getClassLoader().getResourceAsStream(jar);
+    if (is == null) {
+      throw new RuntimeException(jar + " is missing");
+    }
+
     ByteStreams.copy(is, os);
 
     hdfs.close();
-  }
-
-  @Override
-  public void stop() throws Exception {
   }
 }
