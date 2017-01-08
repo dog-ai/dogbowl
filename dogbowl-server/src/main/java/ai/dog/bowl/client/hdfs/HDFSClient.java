@@ -12,8 +12,6 @@ import org.apache.hadoop.fs.Path;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import sun.plugin.dom.exception.InvalidStateException;
-
 import java.io.InputStream;
 import java.io.OutputStream;
 
@@ -48,7 +46,7 @@ public class HDFSClient implements Managed {
 
   public void uploadJar(String jar, String dest) throws Exception {
     if (hdfs == null) {
-      throw new InvalidStateException("HDFS client has not been started");
+      throw new IllegalStateException("HDFS client has not been started");
     }
 
     logger.info("Uploading " + jar + " to " + url + dest);
