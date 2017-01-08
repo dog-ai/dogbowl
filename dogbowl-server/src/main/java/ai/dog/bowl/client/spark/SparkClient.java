@@ -10,8 +10,6 @@ import org.slf4j.LoggerFactory;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionException;
 
 import ai.dog.bowl.client.spark.rest.ClusterMode;
 import ai.dog.bowl.client.spark.rest.DriverState;
@@ -20,8 +18,6 @@ import ai.dog.bowl.client.spark.rest.JobSubmitRequestSpecification;
 import ai.dog.bowl.client.spark.rest.SparkPropertiesSpecification;
 import ai.dog.bowl.client.spark.rest.SparkRestClient;
 import io.dropwizard.lifecycle.Managed;
-
-import static java.util.concurrent.CompletableFuture.supplyAsync;
 
 public class SparkClient implements Managed {
   private static final Logger logger = LoggerFactory.getLogger(SparkClient.class);
@@ -56,72 +52,64 @@ public class SparkClient implements Managed {
   public void stop() throws Exception {
   }
 
-  public CompletableFuture<String> submit(String mainClass, List<String> args) {
-    return supplyAsync(() -> {
-      logger.info("Submitting job with main class " + mainClass);
+  public String submit(String mainClass, List<String> args) throws FailedSparkRequestException, InterruptedException {
+    logger.info("Submitting job with main class " + mainClass);
 
 
-      JobSubmitRequestSpecification job = sparkRestClient.prepareJobSubmit()
-              .appResource(this.resourceUrl)
-              .appName(mainClass)
-              .mainClass(mainClass)
-              .appArgs(args);
+    JobSubmitRequestSpecification job = sparkRestClient.prepareJobSubmit()
+            .appResource(this.resourceUrl)
+            .appName(mainClass)
+            .mainClass(mainClass)
+            .appArgs(args);
 
-      SparkPropertiesSpecification properties = job.withProperties();
-      properties.put("spark.submit.deployMode", "cluster");
-      for (String key : environmentVariables.keySet()) {
-        job.withProperties().put("spark.executorEnv." + key, environmentVariables.get(key));
-      }
+    SparkPropertiesSpecification properties = job.withProperties();
+    properties.put("spark.submit.deployMode", "cluster");
+    for (String key : environmentVariables.keySet()) {
+      job.withProperties().put("spark.executorEnv." + key, environmentVariables.get(key));
+    }
 
-      String submissionId;
-      try {
-        submissionId = job.submit();
-      } catch (FailedSparkRequestException e) {
-        throw new CompletionException(e);
-      }
+    String submissionId = job.submit();
 
-      DriverState prevState = null;
-      DriverState curState = null;
+    DriverState prevState = null;
+    DriverState curState = null;
 
-      long startTimestamp = System.currentTimeMillis();
-      try {
-        do {
+    try {
+      do {
 
-          try {
-            curState = sparkRestClient.checkJobStatus()
-                    .withSubmissionId(submissionId);
-          } catch (FailedSparkRequestException ignored) {}
-
-          if (prevState == null || prevState != curState) {
-
-            logger.info(curState.toString().charAt(0) + curState.toString().substring(1).toLowerCase() +
-                    " job with submission id " + submissionId);
-
-            switch (curState) {
-              case FINISHED:
-              case UNKNOWN:
-              case KILLED:
-              case FAILED:
-              case ERROR:
-                return curState.toString();
-            }
-          }
-
-          prevState = curState;
-
-          Thread.sleep(2000);
-
-        } while (true);
-      } catch (InterruptedException e) {
         try {
-          sparkRestClient.killJob()
+          curState = sparkRestClient.checkJobStatus()
                   .withSubmissionId(submissionId);
-
-          return DriverState.KILLED.toString();
         } catch (FailedSparkRequestException ignored) {
-          return DriverState.UNKNOWN.toString();
         }
+
+        if (prevState == null || prevState != curState) {
+
+          logger.info(curState.toString().charAt(0) + curState.toString().substring(1).toLowerCase() +
+                  " job with submission id " + submissionId);
+
+          switch (curState) {
+            case FINISHED:
+            case UNKNOWN:
+            case KILLED:
+            case FAILED:
+            case ERROR:
+              return curState.toString();
+          }
+        }
+
+        prevState = curState;
+
+        Thread.sleep(2000);
+
+      } while (true);
+    } catch (InterruptedException e) {
+      try {
+        sparkRestClient.killJob()
+                .withSubmissionId(submissionId);
+      } catch (FailedSparkRequestException ignored) {
       }
-    });
+
+      throw e;
+    }
   }
 }

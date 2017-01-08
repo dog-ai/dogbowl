@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016, Hugo Freire <hugo@dog.ai>. All rights reserved.
+ * Copyright (C) 2017, Hugo Freire <hugo@dog.ai>. All rights reserved.
  */
 
 package ai.dog.bowl.client.firebase.queue;
@@ -23,25 +23,41 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import javax.validation.constraints.NotNull;
 
 public class Queue {
+  public static final long MAX_TRANSACTION_RETRIES = 10;
   private static final Logger logger = LoggerFactory.getLogger(Queue.class);
-
+  private static final TaskSpec DEFAULT_TASK_SPEC = new TaskSpec();
   static boolean slept;
   static boolean aborted;
-
-  public static final long MAX_TRANSACTION_RETRIES = 10;
-
-  private static final TaskSpec DEFAULT_TASK_SPEC = new TaskSpec();
-
   private final Options options;
 
   private final Map<String, QueueTask> executingTasks = new HashMap<String, QueueTask>();
   private final Map<String, Runnable> timeoutsInFlight = new HashMap<String, Runnable>();
 
   private final QueueExecutor.Factory executorFactory;
+  private final Firebase taskRef;
+  private final TaskReset taskReset;
+  private final Firebase specRef;
+  private final TaskStateListener taskStateListener = new TaskStateListener() {
+    @Override
+    public void onTaskStart(Thread thread, QueueTask task) {
+      logger.info("Started task with id " + task.getTaskKey());
+
+      executingTasks.put(task.getTaskKey(), task);
+    }
+
+    @Override
+    public void onTaskFinished(QueueTask task, Throwable error) {
+      executingTasks.remove(task.getTaskKey());
+
+      logger.info("Finished task with id " + task.getTaskKey());
+    }
+  };
   private QueueExecutor executor;
   private ScheduledThreadPoolExecutor timeoutExecutor;
-
   private Query newTaskQuery;
+  private Query timeoutQuery;
+  private TaskSpec taskSpec;
+  private AtomicBoolean shutdown = new AtomicBoolean(false);
   private final ChildEventListener newTaskListener = new ChildEventAdapter() {
     @Override
     public void onChildAdded(final DataSnapshot taskSnapshot, String previousChildKey) {
@@ -58,7 +74,7 @@ public class Queue {
         return;
       }
 
-      logger.debug("Received new task - " + taskSnapshot);
+      logger.info("Received new task with id " + taskSnapshot.getKey());
 
       QueueTask task = new QueueTask(taskSnapshot.getRef(), taskSpec, taskReset, options);
       executor.execute(task);
@@ -69,8 +85,6 @@ public class Queue {
       logger.error("There was an error listening for children with a " + Task.STATE_KEY + " of " + taskSpec.getStartState(), error);
     }
   };
-
-  private Query timeoutQuery;
   private final ChildEventListener timeoutListener = new ChildEventAdapter() {
     @Override
     public void onChildAdded(DataSnapshot snapshot, String previousChildKey) {
@@ -108,13 +122,13 @@ public class Queue {
           QueueTask runningTask = executingTasks.remove(snapshot.getKey());
           if(runningTask != null) {
             logger.warn("Task " + runningTask.getTaskKey() + " has timedout while running");
-            runningTask.cancel();
+            runningTask.cancel("timeout");
           }
           else {
             logger.warn("Task " + snapshot.getKey() + " has timedout");
           }
 
-          taskReset.reset(snapshot.getRef(), taskSpec.getInProgressState());
+          //taskReset.reset(snapshot.getRef(), taskSpec.getInProgressState());
         }
       };
 
@@ -149,13 +163,6 @@ public class Queue {
       logger.error("There was an error listening for timeouts with a " + Task.STATE_KEY + " of " + taskSpec.getInProgressState(), error);
     }
   };
-
-  private final Firebase taskRef;
-
-  private final TaskReset taskReset;
-
-  private TaskSpec taskSpec;
-  private final Firebase specRef;
   private final ValueEventListener specChangeListener = new ValueEventListener() {
     @Override
     public void onDataChange(DataSnapshot specSnapshot) {
@@ -180,20 +187,6 @@ public class Queue {
       logger.error("There was an error listening for value events on the spec child", error);
     }
   };
-
-  private final TaskStateListener taskStateListener = new TaskStateListener() {
-    @Override
-    public void onTaskStart(Thread thread, QueueTask task) {
-      executingTasks.put(task.getTaskKey(), task);
-    }
-
-    @Override
-    public void onTaskFinished(QueueTask task, Throwable error) {
-      executingTasks.remove(task.getTaskKey());
-    }
-  };
-
-  private AtomicBoolean shutdown = new AtomicBoolean(false);
 
   private Queue(Builder builder) {
     this.options = new Options(builder);
@@ -291,6 +284,12 @@ public class Queue {
     if(timeoutQuery != null && timeoutListener != null) {
       timeoutQuery.removeEventListener(timeoutListener);
     }
+  }
+
+  public interface TaskStateListener {
+    void onTaskStart(Thread thread, QueueTask task);
+
+    void onTaskFinished(QueueTask task, Throwable error);
   }
 
   public static class Builder {
@@ -410,10 +409,5 @@ public class Queue {
       this.suppressStack = builder.suppressStack;
       this.taskProcessor = builder.taskProcessor;
     }
-  }
-
-  public interface TaskStateListener {
-    void onTaskStart(Thread thread, QueueTask task);
-    void onTaskFinished(QueueTask task, Throwable error);
   }
 }

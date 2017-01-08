@@ -1,10 +1,11 @@
 /*
- * Copyright (C) 2016, Hugo Freire <hugo@dog.ai>. All rights reserved.
+ * Copyright (C) 2017, Hugo Freire <hugo@dog.ai>. All rights reserved.
  */
 
 package ai.dog.bowl.client.firebase.queue;
 
 import com.firebase.client.Firebase;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -12,15 +13,13 @@ import java.util.UUID;
 
 /*package*/ class QueueTask implements Runnable {
   private static final Logger logger = LoggerFactory.getLogger(QueueTask.class);
-
-  private String id;
-
   private final Firebase taskRef;
   private final TaskSpec taskSpec;
   private final TaskReset taskReset;
   private final Queue.Options options;
-
+  private String id;
   private Thread executingThread;
+  private Task task;
 
   private volatile boolean claimed;
   private volatile boolean cancelled;
@@ -53,7 +52,7 @@ import java.util.UUID;
     return done;
   }
 
-  public void cancel() {
+  public void cancel(String reason) {
     String id = this.id == null ? "<id not set yet>" : this.id;
 
     if(cancelled || done) {
@@ -66,8 +65,8 @@ import java.util.UUID;
         logger.debug("Delaying cancelling task (" + taskRef.getKey() + ") on " + id + " because it hasn't started running yet");
       }
       else {
-        executingThread.interrupt();
         logger.debug("Cancelling task (" + taskRef.getKey() + ") on " + id);
+        task.abort(reason, false);
       }
     }
   }
@@ -103,18 +102,18 @@ import java.util.UUID;
 
     claimed = true;
 
-    logger.debug("Started processing task (" + taskRef.getKey() + ") on " + id);
+    logger.debug("Started processing task with id " + taskRef.getKey() + " on " + id);
 
     ValidityChecker validityChecker = new ValidityChecker(Thread.currentThread(), id);
 
-    Task task = taskGenerator.generateTask(id, taskSpec, taskReset, validityChecker, options);
+    task = taskGenerator.generateTask(id, taskSpec, taskReset, validityChecker, options);
     task.process(options.taskProcessor);
 
     done = true;
 
     validityChecker.destroy();
 
-    logger.debug("Finished processing task (" + taskRef.getKey() + ") on " + id);
+    logger.debug("Finished processing task with id " + taskRef.getKey() + " on " + id);
   }
 
   @Override

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016, Hugo Freire <hugo@dog.ai>. All rights reserved.
+ * Copyright (C) 2017, Hugo Freire <hugo@dog.ai>. All rights reserved.
  */
 
 package ai.dog.bowl.client.firebase.queue;
@@ -24,13 +24,6 @@ import java.util.concurrent.CountDownLatch;
 import javax.validation.constraints.NotNull;
 
 public class Task {
-  private static final Logger logger = LoggerFactory.getLogger(Task.class);
-
-  interface Listener {
-    void onSuccess();
-    void onFailure(@NotNull String error, boolean canRetry);
-  }
-
   public static final String STATE_KEY = "_state";
   public static final String STATE_CHANGED_KEY = "_state_changed";
   public static final String OWNER_KEY = "_owner";
@@ -40,10 +33,10 @@ public class Task {
   public static final String ERROR_KEY = "error";
   public static final String ERROR_STACK_KEY = "error_stack";
   public static final String ORIGINAL_TASK_KEY = "original_task";
-
+  private static final Logger logger = LoggerFactory.getLogger(Task.class);
   private static final String ACTION_RESOLVED = "resolve";
   private static final String ACTION_REJECTED = "reject";
-
+  private static final String ACTION_ABORTED = "abort";
   private final Firebase taskRef;
   private final String ownerId;
   private final Map<String, Object> data;
@@ -51,18 +44,13 @@ public class Task {
   private final TaskReset taskReset;
   private final ValidityChecker validityChecker;
   private final boolean suppressStack;
-
+  private final Object actionLock = new Object();
   private boolean processing;
   private CountDownLatch completionLatch;
-
-  private final Object actionLock = new Object();
-
   private WeakReference<Thread> processingThreadRef;
-
   private volatile boolean interrupted;
   private volatile boolean aborted;
   private volatile boolean completed;
-
   // this is true if we no longer own the task, or can't take any other action on this task
   private volatile boolean cancelled;
 
@@ -74,6 +62,17 @@ public class Task {
     this.taskReset = taskReset;
     this.validityChecker = validityChecker;
     this.suppressStack = suppressStack;
+  }
+
+  private static String getStackTraceAsString(Throwable t) {
+    StringWriter sw = new StringWriter();
+    PrintWriter pw = new PrintWriter(sw);
+    try {
+      t.printStackTrace(pw);
+      return sw.toString();
+    } finally {
+      pw.close();
+    }
   }
 
   /*package*/ void process(TaskProcessor taskProcessor) {
@@ -119,9 +118,9 @@ public class Task {
       }
     }
 
-    if(interrupted) {
-      taskReset.reset(taskRef, taskSpec.getInProgressState());
-    }
+    //if(interrupted) {
+    //  taskReset.reset(taskRef, taskSpec.getInProgressState());
+    //}
   }
 
   public boolean isFinished() {
@@ -144,35 +143,125 @@ public class Task {
     return taskSpec;
   }
 
-  public void abort() {
-    abort(null);
+  protected void abort(String errorMessage, boolean reset) {
+    abort(errorMessage, reset, null);
   }
 
-  public void abort(final Listener listener) {
+  protected void abort(String errorMessage, boolean reset, final Listener listener) {
     logger.debug("Attempting to abort task " + taskRef.getKey() + " on " + ownerId);
+
+    Thread processingThread = processingThreadRef.get();
+    if (processingThread == null || !validityChecker.isValid(processingThread, ownerId)) {
+      if (listener != null) {
+        listener.onFailure("Couldn't abort this task because it is owned by another worker", false);
+      }
+
+      logger.debug("Couldn't abort task " + taskRef.getKey() + " on " + ownerId + " because we no longer own it");
+
+      return;
+    }
 
     synchronized (actionLock) {
       if(canTakeAction()) {
         aborted = true;
 
-        taskReset.reset(taskRef, ownerId, taskSpec.getInProgressState(), new TaskReset.Listener() {
-          @Override
-          public void onReset() {
-            completionLatch.countDown();
+        processingThread.interrupt();
 
-            logger.debug("Successful abort of task " + taskRef.getKey() + " on " + ownerId);
-            if(listener != null) listener.onSuccess();
-          }
+        if (reset) {
+          taskReset.reset(taskRef, ownerId, taskSpec.getInProgressState(), new TaskReset.Listener() {
+            @Override
+            public void onReset() {
+              completionLatch.countDown();
 
-          @Override
-          public void onResetFailed(String error, boolean canRetry) {
-            if(!canRetry) {
-              cancel();
+              logger.debug("Successful abort of task " + taskRef.getKey() + " on " + ownerId);
+
+              if (listener != null) listener.onSuccess();
             }
 
-            if(listener != null) listener.onFailure(error, canRetry);
-          }
-        });
+            @Override
+            public void onResetFailed(String error, boolean canRetry) {
+              if (!canRetry) {
+                cancel();
+              }
+
+              if (listener != null) listener.onFailure(error, canRetry);
+            }
+          });
+        } else {
+          taskRef.runTransaction(new Transaction.Handler() {
+            long retries = 0;
+
+            @Override
+            public Transaction.Result doTransaction(MutableData task) {
+              @SuppressWarnings("unchecked") Map<String, Object> value = task.getValue(Map.class);
+              String ourInProgressState = taskSpec.getInProgressState();
+              Object taskState = value.get(STATE_KEY);
+              Object taskOwner = value.get(OWNER_KEY);
+              boolean ownersMatch = ownerId.equals(taskOwner);
+              if ((ourInProgressState == taskState || (ourInProgressState != null && ourInProgressState.equals(taskState))) && ownersMatch) {
+                @SuppressWarnings("unchecked") Map<String, Object> errorDetails = (Map<String, Object>) value.get(ERROR_DETAILS_KEY);
+                if (errorDetails == null) {
+                  errorDetails = new HashMap<String, Object>();
+                }
+
+                int attempts = 0;
+                Integer currentAttempts = (Integer) errorDetails.get(ERROR_DETAILS_ATTEMPTS_KEY);
+                if (currentAttempts == null) {
+                  currentAttempts = 0;
+                }
+                String currentPreviousState = (String) errorDetails.get(ERROR_DETAILS_PREVIOUS_STATE_KEY);
+
+                if (currentAttempts > 0 && ourInProgressState.equals(currentPreviousState)) {
+                  attempts = currentAttempts;
+                }
+
+                if (attempts >= taskSpec.getRetries()) {
+                  value.put(STATE_KEY, taskSpec.getErrorState());
+                } else {
+                  value.put(STATE_KEY, taskSpec.getStartState());
+                }
+
+                value.put(STATE_CHANGED_KEY, ServerValue.TIMESTAMP);
+                value.put(OWNER_KEY, null);
+
+                errorDetails.put(ERROR_DETAILS_PREVIOUS_STATE_KEY, ourInProgressState);
+                errorDetails.put(ERROR_KEY, errorMessage);
+
+                errorDetails.put(ERROR_DETAILS_ATTEMPTS_KEY, attempts + 1);
+
+                value.put(ERROR_DETAILS_KEY, errorDetails);
+                task.setValue(value);
+                return Transaction.success(task);
+              } else {
+                if (!ownersMatch) {
+                  logger.debug("Tried aborting task " + taskRef.getKey() + " on " + ownerId + " but it is owned by " + taskOwner);
+                } else {
+                  logger.debug("Tried aborting task " + taskRef.getKey() + " on " + ownerId + " but its _state (" + taskState + ") did not match our _in_progress_state (" + ourInProgressState + ")");
+                }
+
+                return Transaction.abort();
+              }
+            }
+
+            @Override
+            public void onComplete(FirebaseError error, boolean committed, DataSnapshot snapshot) {
+              final String taskKey = snapshot.getKey();
+
+              if (error != null) {
+                final long incrementedRetries = retries + 1;
+                if (incrementedRetries < Queue.MAX_TRANSACTION_RETRIES) {
+                  logger.debug("Received error while aborting task " + taskKey + " on " + ownerId + "...retrying", error);
+                } else {
+                  logger.debug("Can't aborting task " + taskKey + " on " + ownerId + " - transaction errored too many times, no longer retrying", error);
+                  if (listener != null)
+                    listener.onFailure("Can't aborting task - transaction errored too many times, no longer retrying", true);
+                }
+              } else {
+                onTransactionSuccess(committed, taskKey, ACTION_ABORTED, listener);
+              }
+            }
+          }, false);
+        }
       }
       else {
         cancel();
@@ -495,18 +584,6 @@ public class Task {
     }
   }
 
-  private static String getStackTraceAsString(Throwable t) {
-    StringWriter sw = new StringWriter();
-    PrintWriter pw = new PrintWriter(sw);
-    try {
-      t.printStackTrace(pw);
-      return sw.toString();
-    }
-    finally {
-      pw.close();
-    }
-  }
-
   @Override
   public String toString() {
     return "Task{" +
@@ -514,5 +591,11 @@ public class Task {
       ", ownerId='" + ownerId + '\'' +
       ", taskSpec=" + taskSpec +
       '}';
+  }
+
+  interface Listener {
+    void onSuccess();
+
+    void onFailure(@NotNull String error, boolean canRetry);
   }
 }

@@ -17,8 +17,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
 
 import ai.dog.bowl.client.firebase.FirebaseClient;
 import ai.dog.bowl.client.firebase.queue.Queue;
@@ -55,17 +53,17 @@ public class App extends Application<AppConfig> {
     String mainClass = LOWER_UNDERSCORE.to(UPPER_CAMEL, ((String) data.get("event")).replace(":", "_"));
     List<String> args = (List) data.get("data");
 
-    CompletableFuture<String> future = sparkClient.submit("ai.dog.bowl.job." + mainClass, args);
-
     try {
-      String result = future.get();
+      String result = sparkClient.submit("ai.dog.bowl.job." + mainClass, args);
 
       if ("FINISHED".equals(result)) {
         task.resolve();
       } else {
         task.reject(result);
       }
-    } catch (ExecutionException e) {
+    } catch (InterruptedException e) {
+      throw e;
+    } catch (Exception e) {
       logger.error(e.getMessage(), e);
 
       task.reject(Throwables.getRootCause(e));
