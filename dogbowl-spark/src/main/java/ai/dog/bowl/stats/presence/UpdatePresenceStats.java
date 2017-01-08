@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016, Hugo Freire <hugo@dog.ai>. All rights reserved.
+ * Copyright (C) 2017, Hugo Freire <hugo@dog.ai>. All rights reserved.
  */
 
 package ai.dog.bowl.stats.presence;
@@ -119,7 +119,9 @@ public class UpdatePresenceStats {
           if (!cachedStats.containsKey(period)) {
             Map<String, Object> oldStats = statsRepository.retrieve(companyId, employeeId, performanceName, period, _startDate);
 
-            if (oldStats != null && parse((String) oldStats.get("period_end_date"), ISO_ZONED_DATE_TIME).isBefore(_startDate)) {
+            if (oldStats != null && oldStats.containsKey("period_end_date") && (
+                    parse((String) oldStats.get("period_end_date"), ISO_ZONED_DATE_TIME).isBefore(_startDate) ||
+                            parse((String) oldStats.get("period_end_date"), ISO_ZONED_DATE_TIME).isEqual(_startDate))) {
               cachedStats.put(period, oldStats);
             } else {
               cachedStats.put(period, null);

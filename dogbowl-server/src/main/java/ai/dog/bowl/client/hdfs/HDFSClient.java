@@ -60,7 +60,7 @@ public class HDFSClient implements Managed {
 
     InputStream is = this.getClass().getClassLoader().getResourceAsStream(jar);
     if (is == null) {
-      throw new RuntimeException(jar + " is missing");
+      throw new RuntimeException(jar + " not found");
     }
 
     ByteStreams.copy(is, os);

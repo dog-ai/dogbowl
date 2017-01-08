@@ -53,7 +53,7 @@ public class SparkClient implements Managed {
   }
 
   public String submit(String mainClass, List<String> args) throws FailedSparkRequestException, InterruptedException {
-    logger.info("Submitting job with main class " + mainClass);
+    logger.info("Submitting Spark job with main class " + mainClass);
 
 
     JobSubmitRequestSpecification job = sparkRestClient.prepareJobSubmit()
@@ -85,7 +85,7 @@ public class SparkClient implements Managed {
         if (prevState == null || prevState != curState) {
 
           logger.info(curState.toString().charAt(0) + curState.toString().substring(1).toLowerCase() +
-                  " job with submission id " + submissionId);
+                  " Spark job with submission id " + submissionId);
 
           switch (curState) {
             case FINISHED:
@@ -106,6 +106,8 @@ public class SparkClient implements Managed {
       try {
         sparkRestClient.killJob()
                 .withSubmissionId(submissionId);
+
+        logger.info("Killed Spark job with submission id " + submissionId);
       } catch (FailedSparkRequestException ignored) {
       }
 

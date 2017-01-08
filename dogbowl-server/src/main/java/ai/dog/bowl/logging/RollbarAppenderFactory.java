@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016, Hugo Freire <hugo@dog.ai>. All rights reserved.
+ * Copyright (C) 2017, Hugo Freire <hugo@dog.ai>. All rights reserved.
  */
 
 package ai.dog.bowl.logging;
@@ -24,23 +24,23 @@ public class RollbarAppenderFactory extends AbstractAppenderFactory {
   private String apiKey;
 
   @JsonProperty
-  public void setEnvironment(String environment) {
-    this.environment = environment;
-  }
-
-  @JsonProperty
-  public void setApiKey(String apiKey) {
-    this.apiKey = apiKey;
-  }
-
-  @JsonProperty
   public String getEnvironment() {
     return environment;
   }
 
   @JsonProperty
+  public void setEnvironment(String environment) {
+    this.environment = environment;
+  }
+
+  @JsonProperty
   public String getApiKey() {
     return apiKey;
+  }
+
+  @JsonProperty
+  public void setApiKey(String apiKey) {
+    this.apiKey = apiKey;
   }
 
   @Override
@@ -49,8 +49,11 @@ public class RollbarAppenderFactory extends AbstractAppenderFactory {
     appender.setApiKey(apiKey);
     appender.setEnvironment(environment);
     appender.setContext(context);
+
     addThresholdFilter(appender, threshold);
+
     appender.start();
+
     return wrapAsync(appender);
   }
 }

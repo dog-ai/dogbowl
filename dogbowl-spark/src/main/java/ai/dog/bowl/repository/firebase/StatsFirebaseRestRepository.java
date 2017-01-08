@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016, Hugo Freire <hugo@dog.ai>. All rights reserved.
+ * Copyright (C) 2017, Hugo Freire <hugo@dog.ai>. All rights reserved.
  */
 
 package ai.dog.bowl.repository.firebase;
@@ -111,7 +111,7 @@ public class StatsFirebaseRestRepository extends FirebaseRepository implements S
 
   @Override
   public void update(String companyId, String employeeId, String performanceName, String period, ZonedDateTime date, Map<String, Object> stats) {
-    logger.debug("Started updateValue employee period performance stats: " + companyId + ", " + employeeId + ", " + performanceName + ", " + period + ", " + date.format(ISO_ZONED_DATE_TIME) + ", " + stats);
+    logger.debug("Started update employee period performance stats: " + companyId + ", " + employeeId + ", " + performanceName + ", " + period + ", " + date.format(ISO_ZONED_DATE_TIME) + ", " + stats);
 
     StringBuilder builder = new StringBuilder();
     builder.append("company_employee_performances/" + companyId + "/" + employeeId + "/" + performanceName + "/");
