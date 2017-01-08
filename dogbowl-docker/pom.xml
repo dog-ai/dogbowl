@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-  ~ Copyright (C) 2016, Hugo Freire <hugo@dog.ai>. All rights reserved.
+  ~ Copyright (C) 2017, Hugo Freire <hugo@dog.ai>. All rights reserved.
   -->
 
-<project xmlns="http://maven.apache.org/POM/4.0.0"
-         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+<project xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xmlns="http://maven.apache.org/POM/4.0.0"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <parent>
         <artifactId>dogbowl</artifactId>
@@ -33,10 +33,14 @@
                     <images>
                         <image>
                             <alias>${project.parent.artifactId}</alias>
-                            <name>${docker.repository.name}/${project.parent.artifactId}:${project.version}</name>
+                            <name>${docker.repository.name}/${project.parent.artifactId}</name>
                             <build>
                                 <from>openjdk:8-jre-alpine</from>
                                 <maintainer>hugo@dog.ai</maintainer>
+                                <tags>
+                                    <tag>${project.version}</tag>
+                                    <tag>latest</tag>
+                                </tags>
                                 <assembly>
                                     <descriptor>assembly.xml</descriptor>
                                     <basedir>/</basedir>
@@ -66,12 +70,6 @@
                             </run>
                         </image>
                     </images>
-                    <authConfig>
-                        <push>
-                            <username></username>
-                            <password></password>
-                        </push>
-                    </authConfig>
                 </configuration>
                 <executions>
                     <execution>
