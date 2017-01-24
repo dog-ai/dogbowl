@@ -1,0 +1,29 @@
+<!--
+  ~ Copyright (C) 2017, Hugo Freire <hugo@dog.ai>. All rights reserved.
+  -->
+
+<assembly xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+          xmlns="http://maven.apache.org/plugins/maven-assembly-plugin/assembly/1.1.2"
+          xsi:schemaLocation="http://maven.apache.org/plugins/maven-assembly-plugin/assembly/1.1.2
+          http://maven.apache.org/xsd/assembly-1.1.2.xsd">
+
+    <id>${project.artifactId}</id>
+    <files>
+        <file>
+            <source>../server/target/server.jar</source>
+            <outputDirectory>/opt/dogbowl/lib</outputDirectory>
+        </file>
+        <file>
+            <source>../server/src/main/resources/dogbowl.yml</source>
+            <outputDirectory>/opt/dogbowl/conf</outputDirectory>
+        </file>
+        <file>
+            <source>../spark/target/spark.jar</source>
+            <outputDirectory>/opt/dogbowl/lib</outputDirectory>
+        </file>
+        <file>
+            <source>../spark/target/spark.jar.sha1</source>
+            <outputDirectory>/opt/dogbowl/lib</outputDirectory>
+        </file>
+    </files>
+</assembly>

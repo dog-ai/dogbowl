@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  ~ Copyright (C) 2017, Hugo Freire <hugo@dog.ai>. All rights reserved.
+  -->
+
+<project xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xmlns="http://maven.apache.org/POM/4.0.0"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <parent>
+        <artifactId>dogbowl</artifactId>
+        <groupId>ai.dog</groupId>
+        <version>1.0.0-SNAPSHOT</version>
+    </parent>
+    <modelVersion>4.0.0</modelVersion>
+
+    <artifactId>docker</artifactId>
+    <packaging>pom</packaging>
+
+    <properties>
+        <docker.registry.name>registry.exec.sh</docker.registry.name><!-- leave empty for docker hub; use e.g. "localhost:5000/" for a local docker registry -->
+        <docker.repository.name>${docker.registry.name}</docker.repository.name>
+
+        <docker-maven-plugin.version>0.18.1</docker-maven-plugin.version>
+    </properties>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>io.fabric8</groupId>
+                <artifactId>docker-maven-plugin</artifactId>
+                <version>${docker-maven-plugin.version}</version>
+                <configuration>
+                    <images>
+                        <image>
+                            <alias>${project.parent.artifactId}</alias>
+                            <name>${docker.repository.name}/${project.parent.artifactId}</name>
+                            <build>
+                                <from>openjdk:8-jre-alpine</from>
+                                <maintainer>hugo@dog.ai</maintainer>
+                                <tags>
+                                    <tag>${project.version}</tag>
+                                    <tag>latest</tag>
+                                </tags>
+                                <assembly>
+                                    <descriptor>assembly.xml</descriptor>
+                                    <basedir>/</basedir>
+                                </assembly>
+                                <ports>
+                                    <port>9090</port>
+                                    <port>9091</port>
+                                </ports>
+                                <cmd>
+                                    <shell>java -Xbootclasspath/a:/opt/dogbowl/lib -jar
+                                        /opt/dogbowl/lib/server.jar server
+                                        /opt/dogbowl/conf/dogbowl.yml
+                                    </shell>
+                                </cmd>
+                            </build>
+                            <run>
+                                <namingStrategy>alias</namingStrategy>
+                                <ports>
+                                    <port>9090:9090</port>
+                                    <port>9091:9091</port>
+                                </ports>
+                                <wait>
+                                    <url>http://${docker.host.address}:9091/ping</url>
+                                    <time>10000</time>
+                                </wait>
+                                <log>
+                                    <prefix>${project.parent.artifactId}</prefix>
+                                    <color>cyan</color>
+                                </log>
+                            </run>
+                        </image>
+                    </images>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>docker:build</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>build</goal>
+                        </goals>
+                    </execution>
+                    <execution>
+                        <id>docker:start</id>
+                        <phase>install</phase>
+                        <goals>
+                            <goal>start</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+</project>
