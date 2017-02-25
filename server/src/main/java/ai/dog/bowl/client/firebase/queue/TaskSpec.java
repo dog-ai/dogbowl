@@ -53,6 +53,20 @@ import java.util.concurrent.TimeUnit;
     this.retries = firebaseValToLong(specSnapshot.child(RETRIES).getValue(), DEFAULT_RETRIES);
   }
 
+  private static long firebaseValToLong(Object o, long defaultVal) {
+    if (o instanceof Long) {
+      return (Long) o;
+    } else if (o instanceof Integer) {
+      return ((Integer) o).longValue();
+    } else if (o instanceof Float) {
+      return ((Float) o).longValue();
+    } else if (o instanceof Double) {
+      return ((Double) o).longValue();
+    } else {
+      return defaultVal;
+    }
+  }
+
   public String getStartState() {
     return startState;
   }
@@ -97,26 +111,6 @@ import java.util.concurrent.TimeUnit;
     return retries >= 0;
   }
 
-  public boolean validate() {
-    if (startState != null && startState.equals(inProgressState)) {
-      return false;
-    }
-
-    if (finishedState != null && (finishedState.equals(startState) || finishedState.equals(inProgressState))) {
-      return false;
-    }
-
-    if (errorState != null && errorState.equals(inProgressState)) {
-      return false;
-    }
-
-    if (timeout <= 0) {
-      return false;
-    }
-
-    return retries >= 0;
-  }
-
   @Override
   public String toString() {
     return "TaskSpec{" +
@@ -127,23 +121,5 @@ import java.util.concurrent.TimeUnit;
         ", timeout=" + timeout +
         ", retries=" + retries +
         '}';
-  }
-
-  private static long firebaseValToLong(Object o, long defaultVal) {
-    if(o instanceof Long) {
-      return (Long) o;
-    }
-    else if(o instanceof Integer) {
-      return ((Integer) o).longValue();
-    }
-    else if(o instanceof Float) {
-      return ((Float) o).longValue();
-    }
-    else if(o instanceof Double) {
-      return ((Double) o).longValue();
-    }
-    else {
-      return defaultVal;
-    }
   }
 }
