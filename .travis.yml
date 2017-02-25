@@ -16,7 +16,7 @@ install:
   - mvn install -Dmaven.main.skip=true -Dmaven.test.skip=true -DskipTests -DskipITs -Dmaven.javadoc.skip=true -Ddocker.skip=true -B -V
 script:
   - mvn clean cobertura:cobertura
-deploy:
+after_success:
   - if [ "$TRAVIS_BRANCH" == "master" ]; then
       mvn package -Dmaven.main.skip=true -Dmaven.test.skip=true -DskipTests -DskipITs -Dmaven.javadoc.skip=true -Ddocker.skip=true;
       mvn docker:build -pl docker;
