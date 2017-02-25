@@ -19,6 +19,6 @@ script:
 after_success:
   - mvn coveralls:report
   - if [ "$TRAVIS_BRANCH" == "master" ]; then
-      mvn deploy -Ddocker.skip.run=true -Ddocker.username=\$DOCKER_USERNAME -Ddocker.password=\$DOCKER_PASSWORD;
+      mvn deploy -pl docker -Ddocker.skip.run=true -Ddocker.username=\$DOCKER_USERNAME -Ddocker.password=\$DOCKER_PASSWORD;
     fi
 
