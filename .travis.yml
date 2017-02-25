@@ -13,12 +13,12 @@ notifications:
     on_success: change
     on_failure: always
 install:
-  - mvn install -DskipTests=true -Dmaven.javadoc.skip=true -Ddocker.skip=true -B -V
+  - mvn install -Dmaven.main.skip=true -Dmaven.test.skip=true -DskipTests -DskipITs -Dmaven.javadoc.skip=true -Ddocker.skip=true -B -V
 script:
   - mvn clean cobertura:cobertura
 after_success:
   - mvn coveralls:report
   - if [ "$TRAVIS_BRANCH" == "master" ]; then
-      mvn deploy
+      mvn deploy -Ddocker.skip.run=true -Ddocker.username=\$DOCKER_USERNAME -Ddocker.password=\$DOCKER_PASSWORD;
     fi
 
