@@ -15,8 +15,8 @@ import java.util.SortedMap;
 import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
 
 public class FirebaseRestClient {
-  private static final String DEFAULT_AUTH_PARAM_NAME = "auth";
-  private static final String DEFAULT_PATH_FORMAT = "%s.json";
+  private static final String AUTH_PARAM_NAME = "auth";
+  private static final String PATH_FORMAT = "%s.json";
 
   private final Client client;
 
@@ -34,18 +34,19 @@ public class FirebaseRestClient {
 
   public void setValue(String path, Map value) {
     client.resource(url)
-            .path(String.format(DEFAULT_PATH_FORMAT, path))
-            .queryParam(DEFAULT_AUTH_PARAM_NAME, token)
+            .path(String.format(PATH_FORMAT, path))
+            .queryParam(AUTH_PARAM_NAME, token)
             .type(APPLICATION_JSON).entity(value)
             .put(SortedMap.class);
   }
 
   public void updateValue(String path, Map value) {
     client.resource(url)
-            .path(String.format(DEFAULT_PATH_FORMAT, path))
-            .queryParam(DEFAULT_AUTH_PARAM_NAME, token)
+            .path(String.format(PATH_FORMAT, path))
+            .queryParam(AUTH_PARAM_NAME, token)
+            .header("X-HTTP-Method-Override", "PATCH")
             .type(APPLICATION_JSON).entity(value)
-            .put(Map.class);
+            .post(Map.class);
   }
 
   public Map getValueAsMap(String path) {
@@ -54,23 +55,23 @@ public class FirebaseRestClient {
 
   public Map getValueAsMap(String path, Boolean shallow) {
     return client.resource(url)
-            .path(String.format(DEFAULT_PATH_FORMAT, path))
-            .queryParam(DEFAULT_AUTH_PARAM_NAME, token)
+            .path(String.format(PATH_FORMAT, path))
+            .queryParam(AUTH_PARAM_NAME, token)
             .queryParam("shallow", shallow.toString())
             .get(SortedMap.class);
   }
 
   public String getValueAsString(String path) {
     return client.resource(url)
-            .path(String.format(DEFAULT_PATH_FORMAT, path))
-            .queryParam(DEFAULT_AUTH_PARAM_NAME, token)
+            .path(String.format(PATH_FORMAT, path))
+            .queryParam(AUTH_PARAM_NAME, token)
             .get(String.class);
   }
 
   public void deleteValue(String path) {
     client.resource(url)
-            .path(String.format(DEFAULT_PATH_FORMAT, path))
-            .queryParam(DEFAULT_AUTH_PARAM_NAME, token)
+            .path(String.format(PATH_FORMAT, path))
+            .queryParam(AUTH_PARAM_NAME, token)
             .delete(String.class);
   }
 }
