@@ -10,7 +10,7 @@ notifications:
     on_success: change
     on_failure: always
 install:
-  - mvn install -DskipTests=true -Dmaven.javadoc.skip=true -B -V
+  - mvn install -DskipTests=true -Dmaven.javadoc.skip=true -Ddocker.skip=true -B -V
 script:
   - mvn clean cobertura:cobertura
 after_success:
