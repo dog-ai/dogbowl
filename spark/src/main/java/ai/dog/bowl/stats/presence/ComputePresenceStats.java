@@ -13,6 +13,8 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.TreeMap;
 
+import static java.lang.Integer.MAX_VALUE;
+import static java.lang.Integer.MIN_VALUE;
 import static java.time.ZonedDateTime.parse;
 import static java.time.format.DateTimeFormatter.ISO_ZONED_DATE_TIME;
 
@@ -164,12 +166,12 @@ public class ComputePresenceStats {
       newPeriodStats.put("average_total_duration", 0.0);
       newPeriodStats.put("average_start_time", 0.0);
       newPeriodStats.put("average_end_time", 0.0);
-      newPeriodStats.put("maximum_total_duration", 0);
-      newPeriodStats.put("maximum_start_time", 0);
-      newPeriodStats.put("maximum_end_time", 0);
-      newPeriodStats.put("minimum_total_duration", 0);
-      newPeriodStats.put("minimum_start_time", 0);
-      newPeriodStats.put("minimum_end_time", 0);
+      newPeriodStats.put("maximum_total_duration", MIN_VALUE);
+      newPeriodStats.put("maximum_start_time", MIN_VALUE);
+      newPeriodStats.put("maximum_end_time", MIN_VALUE);
+      newPeriodStats.put("minimum_total_duration", MAX_VALUE);
+      newPeriodStats.put("minimum_start_time", MAX_VALUE);
+      newPeriodStats.put("minimum_end_time", MAX_VALUE);
 
       switch (period) {
         case "month":
@@ -242,12 +244,7 @@ public class ComputePresenceStats {
   private Map<String, Object> computePeriodStatsStartTime(Map<String, Object> dayStats, Map<String, Object> periodStats, ZonedDateTime date, String period) {
     Map.Entry<Long, Integer> startTimeByDay = new AbstractMap.SimpleEntry<>(date.toLocalDate().atStartOfDay(date.getZone()).toEpochSecond(), (int) dayStats.get("start_time"));
 
-    int minimumStartTime;
-    if (((int) periodStats.get("minimum_start_time")) == 0) {
-      minimumStartTime = (int) dayStats.get("start_time");
-    } else {
-      minimumStartTime = Math.min(((int) periodStats.get("minimum_start_time")), (int) dayStats.get("start_time"));
-    }
+    int minimumStartTime = Math.min(((int) periodStats.get("minimum_start_time")), (int) dayStats.get("start_time"));
 
     int maximumStartTime = Math.max(((int) periodStats.get("maximum_start_time")), (int) dayStats.get("start_time"));
 
@@ -269,12 +266,7 @@ public class ComputePresenceStats {
   private Map<String, Object> computePeriodStatsEndTime(Map<String, Object> dayStats, Map<String, Object> periodStats, ZonedDateTime date, String period) {
     Map.Entry<Long, Integer> endTimeByDay = new AbstractMap.SimpleEntry<>(date.toLocalDate().atStartOfDay(date.getZone()).toEpochSecond(), (int) dayStats.get("end_time"));
 
-    int minimumEndTime;
-    if (((int) periodStats.get("minimum_end_time")) == 0) {
-      minimumEndTime = (int) dayStats.get("end_time");
-    } else {
-      minimumEndTime = Math.min(((int) periodStats.get("minimum_end_time")), (int) dayStats.get("end_time"));
-    }
+    int minimumEndTime = Math.min(((int) periodStats.get("minimum_end_time")), (int) dayStats.get("end_time"));
 
     int maximumEndTime = Math.max(((int) periodStats.get("maximum_end_time")), (int) dayStats.get("end_time"));
 
@@ -298,12 +290,7 @@ public class ComputePresenceStats {
 
     int presentDays = ((int) periodStats.get("present_days")) + 1;
 
-    int minimumTotalDuration;
-    if (((int) periodStats.get("minimum_total_duration")) == 0) {
-      minimumTotalDuration = (int) dayStats.get("total_duration");
-    } else {
-      minimumTotalDuration = Math.min(((int) periodStats.get("minimum_total_duration")), (int) dayStats.get("total_duration"));
-    }
+    int minimumTotalDuration = Math.min(((int) periodStats.get("minimum_total_duration")), (int) dayStats.get("total_duration"));
 
     int maximumTotalDuration = Math.max(((int) periodStats.get("maximum_total_duration")), (int) dayStats.get("total_duration"));
 
