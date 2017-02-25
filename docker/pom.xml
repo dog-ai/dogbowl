@@ -17,7 +17,8 @@
     <packaging>docker</packaging>
 
     <properties>
-        <docker.registry.name>registry.exec.sh</docker.registry.name><!-- leave empty for docker hub; use e.g. "localhost:5000/" for a local docker registry -->
+        <docker.registry.name>registry.exec.sh
+        </docker.registry.name><!-- leave empty for docker hub; use e.g. "localhost:5000/" for a local docker registry -->
         <docker.repository.name>${docker.registry.name}</docker.repository.name>
 
         <docker-maven-plugin.version>0.20.0</docker-maven-plugin.version>
@@ -50,12 +51,16 @@
                                     <port>9090</port>
                                     <port>9091</port>
                                 </ports>
-                                <cmd>
-                                    <shell>java -Xbootclasspath/a:/opt/dogbowl/lib -jar
-                                        /opt/dogbowl/lib/server.jar server
-                                        /opt/dogbowl/conf/dogbowl.yml
-                                    </shell>
-                                </cmd>
+                                <entryPoint>
+                                    <exec>
+                                        <arg>java</arg>
+                                        <arg>-Xbootclasspath/a:/opt/dogbowl/lib</arg>
+                                        <arg>-jar</arg>
+                                        <arg>/opt/dogbowl/lib/server.jar</arg>
+                                        <arg>server</arg>
+                                        <arg>/opt/dogbowl/conf/dogbowl.yml</arg>
+                                    </exec>
+                                </entryPoint>
                             </build>
                             <run>
                                 <ports>
