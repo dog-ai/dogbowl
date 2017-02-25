@@ -18,8 +18,8 @@ script:
   - mvn clean cobertura:cobertura
 after_script:
   - if [ "$TRAVIS_BRANCH" == "master" ]; then
-      mvn package -Dmaven.main.skip=true -Dmaven.test.skip=true -DskipTests -DskipITs -Dmaven.javadoc.skip=true -Ddocker.skip=true;
-      mvn docker:build -pl docker;
+      mvn package -Dmaven.main.skip=true -Dmaven.test.skip=true -DskipTests -DskipITs -Dmaven.javadoc.skip=true -Ddocker.skip=true &&\
+      mvn docker:build -pl docker &&\
       mvn docker:push -pl docker -Ddocker.username=\${DOCKER_USERNAME} -Ddocker.password=\${DOCKER_PASSWORD};
     fi
 after_success:
