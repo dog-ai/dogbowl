@@ -79,6 +79,12 @@ public class UpdatePresenceStats {
       periodEndDate = periodEndDate.minus(1, DAYS);
     }
 
+    // if periodEnDate NOTSAMEDAY updatedDate
+    ZonedDateTime updatedDate = statsRepository.retrieveAllTimeUpdatedDate(companyId, employeeId, performanceName);
+    if (updatedDate != null && periodEndDate.isBefore(updatedDate)) {
+      periodEndDate = updatedDate;
+    }
+
     ZonedDateTime startDate = periodEndDate.plus(1, DAYS);
     ZonedDateTime endDate = now(periodEndDate.getZone())
             .atTime(23, 59, 59)

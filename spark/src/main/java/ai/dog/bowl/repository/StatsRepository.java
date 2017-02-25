@@ -10,6 +10,8 @@ import java.util.Map;
 public interface StatsRepository {
   ZonedDateTime retrieveAllTimePeriodEndDate(String companyId, String employeeId, String performanceName);
 
+  ZonedDateTime retrieveAllTimeUpdatedDate(String companyId, String employeeId, String performanceName);
+
   Map<String, Object> retrieve(String companyId, String employeeId, String performanceName, String period, ZonedDateTime date);
 
   void update(String companyId, String employeeId, String performanceName, String period, ZonedDateTime date, Map<String, Object> stats);

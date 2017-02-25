@@ -21,9 +21,22 @@ public class StatsFirebaseRestRepository extends FirebaseRestRepository implemen
 
   @Override
   public ZonedDateTime retrieveAllTimePeriodEndDate(String companyId, String employeeId, String performanceName) {
-    logger.debug("Started retrieve employee day performance: " + companyId + ", " + employeeId + ", " + performanceName);
-
     String path = "company_employee_performances/" + companyId + "/" + employeeId + "/" + performanceName + "/_stats/period_end_date";
+
+    String value = firebase.getValueAsString(path);
+
+    if (value == null || "null".equals(value)) {
+      return null;
+    }
+
+    ZonedDateTime date = parse(value.replace("\"", ""), ISO_ZONED_DATE_TIME);
+
+    return date;
+  }
+
+  @Override
+  public ZonedDateTime retrieveAllTimeUpdatedDate(String companyId, String employeeId, String performanceName) {
+    String path = "company_employee_performances/" + companyId + "/" + employeeId + "/" + performanceName + "/_stats/updated_date";
 
     String value = firebase.getValueAsString(path);
 
