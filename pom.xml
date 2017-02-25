@@ -38,6 +38,8 @@
         <maven-shade-plugin.version>2.3</maven-shade-plugin.version>
         <maven-compiler-plugin.version>3.1</maven-compiler-plugin.version>
         <maven-surefire-plugin.version>2.12.4</maven-surefire-plugin.version>
+        <coveralls-maven-plugin.version>3.1.0</coveralls-maven-plugin.version>
+        <cobertura-maven-plugin.version>2.7</cobertura-maven-plugin.version>
     </properties>
 
     <dependencyManagement>
@@ -117,7 +119,6 @@
                         <encoding>${project.build.sourceEncoding}</encoding>
                         <forceJavacCompilerUse>true</forceJavacCompilerUse>
                         <useIncrementalCompilation>false</useIncrementalCompilation>
-                        <skip>true</skip>
                     </configuration>
                 </plugin>
                 <plugin>
@@ -125,7 +126,21 @@
                     <artifactId>maven-surefire-plugin</artifactId>
                     <version>${maven-surefire-plugin.version}</version>
                     <configuration>
-                        <skipTests>true</skipTests>
+                        <testFailureIgnore>true</testFailureIgnore>
+                    </configuration>
+                </plugin>
+                <plugin>
+                    <groupId>org.eluder.coveralls</groupId>
+                    <artifactId>coveralls-maven-plugin</artifactId>
+                    <version>${coveralls-maven-plugin.version}</version>
+                </plugin>
+                <plugin>
+                    <groupId>org.codehaus.mojo</groupId>
+                    <artifactId>cobertura-maven-plugin</artifactId>
+                    <version>${cobertura-maven-plugin.version}</version>
+                    <configuration>
+                        <format>xml</format>
+                        <aggregate>true</aggregate>
                     </configuration>
                 </plugin>
             </plugins>

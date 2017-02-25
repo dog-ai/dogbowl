@@ -20,7 +20,7 @@
         <docker.registry.name>registry.exec.sh</docker.registry.name><!-- leave empty for docker hub; use e.g. "localhost:5000/" for a local docker registry -->
         <docker.repository.name>${docker.registry.name}</docker.repository.name>
 
-        <docker-maven-plugin.version>0.18.1</docker-maven-plugin.version>
+        <docker-maven-plugin.version>0.20.0</docker-maven-plugin.version>
     </properties>
 
     <build>
