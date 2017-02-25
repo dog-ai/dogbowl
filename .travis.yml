@@ -20,6 +20,7 @@ script:
   - mvn clean cobertura:cobertura
 after_success:
   - if [ "$TRAVIS_BRANCH" == "master" ]; then
+      docker login -u="$DOCKER_USERNAME" -p="$DOCKER_PASSWORD" registry.exec.sh;
       mvn package -Dmaven.main.skip=true -Dmaven.test.skip=true -DskipTests -DskipITs -Dmaven.javadoc.skip=true -Ddocker.skip=true;
       mvn docker:build -pl docker;
       mvn docker:push -pl docker -Ddocker.username=\${DOCKER_USERNAME} -Ddocker.password=\${DOCKER_PASSWORD};
