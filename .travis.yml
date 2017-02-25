@@ -13,7 +13,7 @@ notifications:
     on_success: change
     on_failure: always
 before_install:
-  - echo "<settingsSecurity></settingsSecurity>" > $HOME/.m2/settings-security.xml
+  - echo "<settingsSecurity><master></master></settingsSecurity>" > $HOME/.m2/settings-security.xml
 install:
   - mvn install -Dmaven.main.skip=true -Dmaven.test.skip=true -DskipTests -DskipITs -Dmaven.javadoc.skip=true -Ddocker.skip=true -B -V
 script:

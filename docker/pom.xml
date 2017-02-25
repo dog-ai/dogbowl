@@ -40,7 +40,6 @@
                                 <from>openjdk:8-jre-alpine</from>
                                 <maintainer>hugo@dog.ai</maintainer>
                                 <tags>
-                                    <tag>${project.version}</tag>
                                     <tag>latest</tag>
                                 </tags>
                                 <assembly>
