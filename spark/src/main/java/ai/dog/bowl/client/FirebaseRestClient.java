@@ -45,20 +45,20 @@ public class FirebaseRestClient {
   }
 
   public void setValue(String path, Map value) {
-    with(retryPolicy).run(() -> client.resource(url)
+    with(retryPolicy).get(() -> client.resource(url)
             .path(String.format(PATH_FORMAT, path))
             .queryParam(AUTH_PARAM_NAME, token)
             .type(APPLICATION_JSON).entity(value)
-            .put(SortedMap.class));
+            .put(ClientResponse.class));
   }
 
   public void updateValue(String path, Map value) {
-    with(retryPolicy).run(() -> client.resource(url)
+    with(retryPolicy).get(() -> client.resource(url)
             .path(String.format(PATH_FORMAT, path))
             .queryParam(AUTH_PARAM_NAME, token)
             .header("X-HTTP-Method-Override", "PATCH")
             .type(APPLICATION_JSON).entity(value)
-            .post(Map.class));
+            .post(ClientResponse.class));
   }
 
   public Map getValueAsMap(String path) {
@@ -66,22 +66,24 @@ public class FirebaseRestClient {
   }
 
   public Map getValueAsMap(String path, Boolean shallow) {
-    return client.resource(url)
+    return with(retryPolicy).get(() -> client.resource(url)
             .path(String.format(PATH_FORMAT, path))
             .queryParam(AUTH_PARAM_NAME, token)
             .queryParam("shallow", shallow.toString())
-            .get(SortedMap.class);
+            .get(ClientResponse.class))
+            .getEntity(SortedMap.class);
   }
 
   public String getValueAsString(String path) {
-    return client.resource(url)
+    return with(retryPolicy).get(() -> client.resource(url)
             .path(String.format(PATH_FORMAT, path))
             .queryParam(AUTH_PARAM_NAME, token)
-            .get(String.class);
+            .get(ClientResponse.class))
+            .getEntity(String.class);
   }
 
   public void deleteValue(String path) {
-    with(retryPolicy).run(() -> client.resource(url)
+    with(retryPolicy).get(() -> client.resource(url)
             .path(String.format(PATH_FORMAT, path))
             .queryParam(AUTH_PARAM_NAME, token)
             .delete(String.class));
