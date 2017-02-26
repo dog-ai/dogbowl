@@ -4,11 +4,11 @@
 
 package ai.dog.bowl.repository;
 
-import java.time.ZonedDateTime;
+import java.time.Instant;
 import java.util.Map;
 
 public interface PerformanceRepository {
-  Map<String, Map> findAllByNameAndDate(String companyId, String employeeId, String performanceName, ZonedDateTime date);
+  Map<String, Map> findAllByNameAndDate(String companyId, String employeeId, String performanceName, Instant date);
 
-  ZonedDateTime findFirstPerformanceDate(String companyId, String employeeId, String performanceName, String timezone);
+  Instant findFirstPerformanceDate(String companyId, String employeeId, String performanceName);
 }

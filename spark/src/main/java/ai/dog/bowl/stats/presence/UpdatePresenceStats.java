@@ -6,26 +6,22 @@ package ai.dog.bowl.stats.presence;
 
 import org.slf4j.Logger;
 
+import java.time.Instant;
+import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 import ai.dog.bowl.repository.CompanyRepository;
-import ai.dog.bowl.repository.DogRepository;
 import ai.dog.bowl.repository.EmployeeRepository;
 import ai.dog.bowl.repository.PerformanceRepository;
 import ai.dog.bowl.repository.StatsRepository;
 import ai.dog.bowl.repository.firebase.CompanyFirebaseRestRepository;
-import ai.dog.bowl.repository.firebase.DogFirebaseRestRepository;
 import ai.dog.bowl.repository.firebase.EmployeeFirebaseRestRepository;
 import ai.dog.bowl.repository.firebase.PerformanceFirebaseRestRepository;
 import ai.dog.bowl.repository.firebase.StatsFirebaseRestRepository;
 
-import static java.time.LocalDate.now;
-import static java.time.ZonedDateTime.parse;
-import static java.time.format.DateTimeFormatter.ISO_DATE;
-import static java.time.format.DateTimeFormatter.ISO_ZONED_DATE_TIME;
 import static java.time.temporal.ChronoUnit.DAYS;
 import static org.slf4j.LoggerFactory.getLogger;
 
@@ -36,26 +32,26 @@ public class UpdatePresenceStats {
   private PerformanceRepository performanceRepository;
   private StatsRepository statsRepository;
   private CompanyRepository companyRepository;
-  private DogRepository dogRepository;
 
-  private ComputePresenceStats statsUtil;
+  private ComputeDayStats computeDayStats;
+  private ComputePeriodStats computePeriodStats;
 
   public UpdatePresenceStats() {
     this.employeeRepository = new EmployeeFirebaseRestRepository();
     this.performanceRepository = new PerformanceFirebaseRestRepository();
     this.statsRepository = new StatsFirebaseRestRepository();
     this.companyRepository = new CompanyFirebaseRestRepository();
-    this.dogRepository = new DogFirebaseRestRepository();
 
-    this.statsUtil = new ComputePresenceStats();
+    this.computeDayStats = new ComputeDayStats();
+    this.computePeriodStats = new ComputePeriodStats();
   }
-  
-  public List<String> getEmployees(String companyId) {
+
+  public List<String> findEmployeesByCompanyId(String companyId) {
     return this.employeeRepository.findEmployeesByCompanyId(companyId);  
   }
 
   public void updateEmployeeStats(final String companyId, final String employeeId, final String performanceName) {
-    ZonedDateTime periodEndDate = statsRepository
+    Instant periodEndDate = statsRepository
             .retrieveAllTimePeriodEndDate(companyId, employeeId, performanceName);
 
     if (periodEndDate == null) {
@@ -65,87 +61,100 @@ public class UpdatePresenceStats {
         return;
       }
 
-      String dogId = (String) company.get("dog_id");
-
-      Map<String, Object> dog = dogRepository.findById(dogId);
-
-      if (dog == null || !dog.containsKey("timezone") || dog.get("timezone") == null) {
+      periodEndDate = performanceRepository.findFirstPerformanceDate(companyId, employeeId, performanceName);
+      if (periodEndDate == null) {
         return;
       }
 
-      String timezone = (String) dog.get("timezone");
-
-      periodEndDate = performanceRepository.findFirstPerformanceDate(companyId, employeeId, performanceName, timezone);
       periodEndDate = periodEndDate.minus(1, DAYS);
     }
 
-    // if periodEnDate NOTSAMEDAY updatedDate
-    ZonedDateTime updatedDate = statsRepository.retrieveAllTimeUpdatedDate(companyId, employeeId, performanceName);
+    Instant updatedDate = statsRepository.retrieveAllTimeUpdatedDate(companyId, employeeId, performanceName);
     if (updatedDate != null && periodEndDate.isBefore(updatedDate)) {
-      periodEndDate = updatedDate;
+      periodEndDate = updatedDate.atZone(ZoneId.of("Z")).toLocalDate()
+              .atTime(23, 59, 59)
+              .atZone(ZoneId.of("Z")).toInstant();
     }
 
-    ZonedDateTime startDate = periodEndDate.plus(1, DAYS);
-    ZonedDateTime endDate = now(periodEndDate.getZone())
+    Instant startDate = periodEndDate.plus(1, DAYS);
+    Instant endDate = Instant.now().atZone(ZoneId.of("Z")).toLocalDate()
             .atTime(23, 59, 59)
-            .atZone(periodEndDate.getZone());
+            .atZone(ZoneId.of("Z")).toInstant();
 
     updateEmployeeStats(companyId, employeeId, performanceName, startDate, endDate);
   }
 
-  private void updateEmployeeStats(final String companyId, final String employeeId, final String performanceName, final ZonedDateTime startDate, final ZonedDateTime endDate) {
+  private void updateEmployeeStats(final String companyId, final String employeeId, final String performanceName, final Instant startDate, final Instant endDate) {
     if (!startDate.isBefore(endDate)) {
       return;
     }
 
-    logger.info("Updating employee presence stats from: " +
-            startDate.format(ISO_DATE) + " until " +
-            endDate.format(ISO_DATE));
+    logger.info("Updating employee presence stats from: " + startDate + " until " + endDate);
+
+    Instant currentDate = startDate;
 
     Map<String, Map<String, Object>> cachedStats = new HashMap<>();
-    ZonedDateTime _startDate = startDate;
-
-    while (_startDate.isBefore(endDate)) {
+    cachedStats.put("month", null);
+    cachedStats.put("year", null);
+    while (currentDate.isBefore(endDate)) {
       try {
-        Map<String, Map> performance = performanceRepository.findAllByNameAndDate(companyId, employeeId, performanceName, _startDate);
+        Map<String, Map> performance = performanceRepository.findAllByNameAndDate(companyId, employeeId, performanceName, currentDate);
         if (performance == null) {
-          statsRepository.updatePeriodEndDate(companyId, employeeId, performanceName, "all-time", _startDate);
+          statsRepository.updatePeriodEndDate(companyId, employeeId, performanceName, "all-time", currentDate, currentDate.toEpochMilli() / 1000);
 
-          _startDate = _startDate.plus(1, DAYS);
+          currentDate = currentDate.plus(1, DAYS);
 
           continue;
         }
 
-        // compute and updateValue day stats
-        Map<String, Object> dayStats = statsUtil.computeDayStats(performance, _startDate);
-        statsRepository.update(companyId, employeeId, performanceName, "day", _startDate, dayStats);
+        Map<String, Object> dayStats = updateEmployeeDayStats(companyId, employeeId, performanceName, performance, currentDate);
 
-        // compute and updateValue all other stats periods
+        // compute and update all other stats periods
         for (String period : new String[]{"month", "year", "all-time"}) {
-          if (!cachedStats.containsKey(period)) {
-            Map<String, Object> oldStats = statsRepository.retrieve(companyId, employeeId, performanceName, period, _startDate);
-
-            if (oldStats != null && oldStats.containsKey("period_end_date") && (
-                    parse((String) oldStats.get("period_end_date"), ISO_ZONED_DATE_TIME).isBefore(_startDate) ||
-                            parse((String) oldStats.get("period_end_date"), ISO_ZONED_DATE_TIME).isEqual(_startDate))) {
-              cachedStats.put(period, oldStats);
-            } else {
-              cachedStats.put(period, null);
-            }
-          }
-
-          Map<String, Object> oldStats = cachedStats.get(period);
-          Map<String, Object> newStats = statsUtil.computePeriodStats(dayStats, oldStats, period, _startDate);
-          statsRepository.update(companyId, employeeId, performanceName, period, _startDate, newStats);
-          cachedStats.put(period, newStats);
+          updateEmployeePeriodStats(companyId, employeeId, performanceName, period, cachedStats, dayStats, currentDate);
         }
 
-        logger.info("Updated presence stats with performance from date: " + _startDate.format(ISO_DATE));
+        logger.info("Updated presence stats with performance from date: " + currentDate);
 
-        _startDate = _startDate.plus(1, DAYS);
+        currentDate = currentDate.plus(1, DAYS);
       } catch (Exception e) {
         e.printStackTrace();
       }
     }
+  }
+
+  private Map<String, Object> updateEmployeeDayStats(final String companyId, final String employeeId, final String performanceName, Map<String, Map> performance, Instant date) {
+    Map<String, Object> dayStats = computeDayStats.compute(performance, date);
+
+    statsRepository.update(companyId, employeeId, performanceName, "day", date, dayStats);
+
+    return dayStats;
+  }
+
+  private void updateEmployeePeriodStats(final String companyId, final String employeeId, final String performanceName, String period, Map<String, Map<String, Object>> cachedStats, Map<String, Object> dayStats, Instant date) {
+    if (!cachedStats.containsKey(period)) {
+      Map<String, Object> oldStats = statsRepository.retrieve(companyId, employeeId, performanceName, period, date);
+
+      // TODO: temp
+      Instant oldPeriodEndDate = null;
+      if (oldStats != null && oldStats.containsKey("period_end_date") && oldStats.get("period_end_date") instanceof String) {
+        oldPeriodEndDate = ZonedDateTime.parse((String) oldStats.get("period_end_date")).toInstant();
+      } else if (oldStats != null && oldStats.containsKey("period_end_date")) {
+        oldPeriodEndDate = Instant.ofEpochSecond((Long) oldStats.get("period_end_date"));
+      }
+
+      if (oldStats != null && oldStats.containsKey("period_end_date") && (oldPeriodEndDate.isBefore(date) || oldPeriodEndDate.equals(date))) {
+        cachedStats.put(period, oldStats);
+      } else {
+        cachedStats.put(period, null);
+      }
+    }
+
+    Map<String, Object> oldStats = cachedStats.get(period);
+    Map<String, Object> newStats = computePeriodStats.compute(dayStats, oldStats, period, date);
+
+    statsRepository.update(companyId, employeeId, performanceName, period, date, newStats);
+
+    cachedStats.put(period, newStats);
   }
 }

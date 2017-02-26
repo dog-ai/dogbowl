@@ -8,6 +8,8 @@ import java.util.Map;
 
 import ai.dog.bowl.repository.DogRepository;
 
+import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.base.Strings.isNullOrEmpty;
 import static org.slf4j.LoggerFactory.getLogger;
 
 public class DogFirebaseRestRepository extends FirebaseRestRepository implements DogRepository {
@@ -15,9 +17,11 @@ public class DogFirebaseRestRepository extends FirebaseRestRepository implements
 
   @Override
   public Map<String, Object> findById(String dogId) {
+    checkArgument(!isNullOrEmpty(dogId));
+
     String path = "dogs/" + dogId;
 
-    Map<String, Object> value = firebase.getValueAsMap(path);
+    Map<String, Object> value = client.getValueAsMap(path);
 
     if (value == null | "null".equals(value)) {
       return null;

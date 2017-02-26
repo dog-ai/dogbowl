@@ -4,20 +4,17 @@
 
 package ai.dog.bowl.repository.firebase;
 
-import java.text.DateFormat;
-import java.text.SimpleDateFormat;
+import java.time.Instant;
+import java.time.ZoneId;
 import java.time.ZonedDateTime;
-import java.util.Calendar;
-import java.util.Date;
-import java.util.GregorianCalendar;
 import java.util.Map;
 import java.util.SortedMap;
-import java.util.TimeZone;
 
 import ai.dog.bowl.repository.PerformanceRepository;
 
-import static java.time.ZonedDateTime.parse;
-import static java.time.format.DateTimeFormatter.ISO_ZONED_DATE_TIME;
+import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.base.Preconditions.checkNotNull;
+import static com.google.common.base.Strings.isNullOrEmpty;
 import static java.time.format.DateTimeFormatter.ofPattern;
 import static org.slf4j.LoggerFactory.getLogger;
 
@@ -25,12 +22,17 @@ public class PerformanceFirebaseRestRepository extends FirebaseRestRepository im
   private static final org.slf4j.Logger logger = getLogger(PerformanceFirebaseRestRepository.class);
 
   @Override
-  public Map<String, Map> findAllByNameAndDate(String companyId, String employeeId, String performanceName, ZonedDateTime date) {
-    logger.debug("Started retrieve employee day performance: " + companyId + ", " + employeeId + ", " + performanceName + ", " + date.format(ISO_ZONED_DATE_TIME));
+  public Map<String, Map> findAllByNameAndDate(String companyId, String employeeId, String performanceName, Instant date) {
+    checkArgument(!isNullOrEmpty(companyId));
+    checkArgument(!isNullOrEmpty(employeeId));
+    checkArgument(!isNullOrEmpty(performanceName));
+    checkNotNull(date);
 
-    String path = "company_employee_performances/" + companyId + "/" + employeeId + "/" + performanceName + "/" + date.format(ofPattern("yyyy/MM/dd"));
+    logger.debug("Started retrieve employee day performance: " + companyId + ", " + employeeId + ", " + performanceName + ", " + date);
 
-    Map value = firebase.getValueAsMap(path);
+    String path = "company_employee_performances/" + companyId + "/" + employeeId + "/" + performanceName + "/" + ofPattern("yyyy/MM/dd").withZone(ZoneId.of("Z")).format(date);
+
+    Map value = client.getValueAsMap(path);
 
     if (value == null) {
       return null;
@@ -44,10 +46,14 @@ public class PerformanceFirebaseRestRepository extends FirebaseRestRepository im
   }
 
   @Override
-  public ZonedDateTime findFirstPerformanceDate(String companyId, String employeeId, String performanceName, String timezone) {
+  public Instant findFirstPerformanceDate(String companyId, String employeeId, String performanceName) {
+    checkArgument(!isNullOrEmpty(companyId));
+    checkArgument(!isNullOrEmpty(employeeId));
+    checkArgument(!isNullOrEmpty(performanceName));
+
     String path = "company_employee_performances/" + companyId + "/" + employeeId + "/" + performanceName;
 
-    SortedMap<String, Object> value = (SortedMap<String, Object>) firebase.getValueAsMap(path, true);
+    SortedMap<String, Object> value = (SortedMap<String, Object>) client.getValueAsMap(path, true);
 
     if (value == null || "null".equals(value)) {
       return null;
@@ -56,7 +62,7 @@ public class PerformanceFirebaseRestRepository extends FirebaseRestRepository im
     int year = Integer.parseInt(value.firstKey());
     path += "/" + value.firstKey();
 
-    value = (SortedMap<String, Object>) firebase.getValueAsMap(path, true);
+    value = (SortedMap<String, Object>) client.getValueAsMap(path, true);
 
     if (value == null || "null".equals(value)) {
       return null;
@@ -65,7 +71,7 @@ public class PerformanceFirebaseRestRepository extends FirebaseRestRepository im
     int month = Integer.parseInt(value.firstKey());
     path += "/" + value.firstKey();
 
-    value = (SortedMap<String, Object>) firebase.getValueAsMap(path, true);
+    value = (SortedMap<String, Object>) client.getValueAsMap(path, true);
 
     if (value == null || "null".equals(value)) {
       return null;
@@ -73,12 +79,8 @@ public class PerformanceFirebaseRestRepository extends FirebaseRestRepository im
 
     int day = Integer.parseInt(value.firstKey());
 
-    Calendar calendar = new GregorianCalendar(year, month - 1, day, 23, 59, 59);
-    DateFormat format = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssXXX");
-    format.setTimeZone(TimeZone.getTimeZone(timezone));
+    ZonedDateTime date = ZonedDateTime.parse(year + "-" + (month < 10 ? "0" + month : month) + "-" + (day < 10 ? "0" + day : day) + "T00:00:00Z");
 
-    ZonedDateTime date = parse(format.format(new Date(calendar.getTimeInMillis())), ISO_ZONED_DATE_TIME);
-
-    return date;
+    return date.toLocalDate().atStartOfDay().atZone(ZoneId.of("Z")).toInstant();
   }
 }

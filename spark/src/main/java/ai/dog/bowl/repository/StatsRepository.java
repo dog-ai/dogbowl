@@ -4,19 +4,19 @@
 
 package ai.dog.bowl.repository;
 
-import java.time.ZonedDateTime;
+import java.time.Instant;
 import java.util.Map;
 
 public interface StatsRepository {
-  ZonedDateTime retrieveAllTimePeriodEndDate(String companyId, String employeeId, String performanceName);
+  Instant retrieveAllTimePeriodEndDate(String companyId, String employeeId, String performanceName);
 
-  ZonedDateTime retrieveAllTimeUpdatedDate(String companyId, String employeeId, String performanceName);
+  Instant retrieveAllTimeUpdatedDate(String companyId, String employeeId, String performanceName);
 
-  Map<String, Object> retrieve(String companyId, String employeeId, String performanceName, String period, ZonedDateTime date);
+  Map<String, Object> retrieve(String companyId, String employeeId, String performanceName, String period, Instant date);
 
-  void update(String companyId, String employeeId, String performanceName, String period, ZonedDateTime date, Map<String, Object> stats);
+  void update(String companyId, String employeeId, String performanceName, String period, Instant date, Map<String, Object> stats);
 
-  void updatePeriodEndDate(String companyId, String employeeId, String performanceName, String period, ZonedDateTime periodEndDate);
+  void updatePeriodEndDate(String companyId, String employeeId, String performanceName, String period, Instant date, Long periodEndDate);
 
   void deleteAll(String companyId, String employeeId, String performanceName);
 }

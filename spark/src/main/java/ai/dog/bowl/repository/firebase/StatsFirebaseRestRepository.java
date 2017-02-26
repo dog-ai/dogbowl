@@ -4,15 +4,16 @@
 
 package ai.dog.bowl.repository.firebase;
 
-import java.time.ZonedDateTime;
-import java.time.format.DateTimeFormatter;
+import java.time.Instant;
+import java.time.ZoneId;
 import java.util.Map;
 
 import ai.dog.bowl.repository.StatsRepository;
 
+import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.base.Preconditions.checkNotNull;
+import static com.google.common.base.Strings.isNullOrEmpty;
 import static com.google.common.collect.ImmutableMap.of;
-import static java.time.ZonedDateTime.parse;
-import static java.time.format.DateTimeFormatter.ISO_ZONED_DATE_TIME;
 import static java.time.format.DateTimeFormatter.ofPattern;
 import static org.slf4j.LoggerFactory.getLogger;
 
@@ -20,51 +21,65 @@ public class StatsFirebaseRestRepository extends FirebaseRestRepository implemen
   private static final org.slf4j.Logger logger = getLogger(StatsFirebaseRestRepository.class);
 
   @Override
-  public ZonedDateTime retrieveAllTimePeriodEndDate(String companyId, String employeeId, String performanceName) {
+  public Instant retrieveAllTimePeriodEndDate(String companyId, String employeeId, String performanceName) {
+    checkArgument(!isNullOrEmpty(companyId));
+    checkArgument(!isNullOrEmpty(employeeId));
+    checkArgument(!isNullOrEmpty(performanceName));
+
     String path = "company_employee_performances/" + companyId + "/" + employeeId + "/" + performanceName + "/_stats/period_end_date";
 
-    String value = firebase.getValueAsString(path);
+    Long value = client.getValueAsLong(path);
 
-    if (value == null || "null".equals(value)) {
+    if (value == null) {
       return null;
     }
 
-    ZonedDateTime date = parse(value.replace("\"", ""), ISO_ZONED_DATE_TIME);
+    Instant date = Instant.ofEpochSecond(value);
 
     return date;
   }
 
   @Override
-  public ZonedDateTime retrieveAllTimeUpdatedDate(String companyId, String employeeId, String performanceName) {
+  public Instant retrieveAllTimeUpdatedDate(String companyId, String employeeId, String performanceName) {
+    checkArgument(!isNullOrEmpty(companyId));
+    checkArgument(!isNullOrEmpty(employeeId));
+    checkArgument(!isNullOrEmpty(performanceName));
+
     String path = "company_employee_performances/" + companyId + "/" + employeeId + "/" + performanceName + "/_stats/updated_date";
 
-    String value = firebase.getValueAsString(path);
+    Long value = client.getValueAsLong(path);
 
-    if (value == null || "null".equals(value)) {
+    if (value == null) {
       return null;
     }
 
-    ZonedDateTime date = parse(value.replace("\"", ""), ISO_ZONED_DATE_TIME);
+    Instant date = Instant.ofEpochSecond(value);
 
     return date;
   }
 
   @Override
-  public Map<String, Object> retrieve(String companyId, String employeeId, String performanceName, String period, ZonedDateTime date) {
-    logger.debug("Started retrieve employee day performance: " + companyId + ", " + employeeId + ", " + performanceName + ", " + period + ", " + date.format(ISO_ZONED_DATE_TIME));
+  public Map<String, Object> retrieve(String companyId, String employeeId, String performanceName, String period, Instant date) {
+    checkArgument(!isNullOrEmpty(companyId));
+    checkArgument(!isNullOrEmpty(employeeId));
+    checkArgument(!isNullOrEmpty(performanceName));
+    checkArgument(!isNullOrEmpty(period));
+    checkNotNull(date);
+
+    logger.debug("Started retrieve employee day performance: " + companyId + ", " + employeeId + ", " + performanceName + ", " + period + ", " + date);
 
     StringBuilder builder = new StringBuilder();
     builder.append("company_employee_performances/" + companyId + "/" + employeeId + "/" + performanceName + "/");
 
     switch(period) {
       case "day":
-        builder.append(date.format(ofPattern("yyyy/MM/dd")) + "/_stats");
+        builder.append(ofPattern("yyyy/MM/dd").withZone(ZoneId.of("Z")).format(date) + "/_stats");
         break;
       case "month":
-        builder.append(date.format(ofPattern("yyyy/MM")) + "/_stats");
+        builder.append(ofPattern("yyyy/MM").withZone(ZoneId.of("Z")).format(date) + "/_stats");
         break;
       case "year":
-        builder.append(date.format(ofPattern("yyyy")) + "/_stats");
+        builder.append(ofPattern("yyyy").withZone(ZoneId.of("Z")).format(date) + "/_stats");
         break;
       case "all-time":
         builder.append("_stats");
@@ -75,13 +90,19 @@ public class StatsFirebaseRestRepository extends FirebaseRestRepository implemen
 
     String path = builder.toString();
 
-    Map value = firebase.getValueAsMap(path);
+    Map value = client.getValueAsMap(path);
 
     if (value == null || "null".equals(null)) {
       return null;
     }
 
     // TODO: temp. fix
+    if (value.get("period_start_date") instanceof Integer) {
+      value.put("period_start_date", ((Integer) value.get("period_start_date")).longValue());
+    }
+    if (value.get("period_end_date") instanceof Integer) {
+      value.put("period_end_date", ((Integer) value.get("period_end_date")).longValue());
+    }
     if (value.get("maximum_end_time") instanceof Double) {
       value.put("maximum_end_time", ((Double) value.get("maximum_end_time")).intValue());
     }
@@ -123,21 +144,28 @@ public class StatsFirebaseRestRepository extends FirebaseRestRepository implemen
   }
 
   @Override
-  public void update(String companyId, String employeeId, String performanceName, String period, ZonedDateTime date, Map<String, Object> stats) {
-    logger.debug("Started update employee period performance stats: " + companyId + ", " + employeeId + ", " + performanceName + ", " + period + ", " + date.format(ISO_ZONED_DATE_TIME) + ", " + stats);
+  public void update(String companyId, String employeeId, String performanceName, String period, Instant date, Map<String, Object> stats) {
+    checkArgument(!isNullOrEmpty(companyId));
+    checkArgument(!isNullOrEmpty(employeeId));
+    checkArgument(!isNullOrEmpty(performanceName));
+    checkArgument(!isNullOrEmpty(period));
+    checkNotNull(date);
+    checkNotNull(stats);
+
+    logger.debug("Started update employee period performance stats: " + companyId + ", " + employeeId + ", " + performanceName + ", " + period + ", " + date + ", " + stats);
 
     StringBuilder builder = new StringBuilder();
     builder.append("company_employee_performances/" + companyId + "/" + employeeId + "/" + performanceName + "/");
 
     switch (period) {
       case "day":
-        builder.append(date.format(DateTimeFormatter.ofPattern("yyyy/MM/dd")) + "/_stats");
+        builder.append(ofPattern("yyyy/MM/dd").withZone(ZoneId.of("Z")).format(date) + "/_stats");
         break;
       case "month":
-        builder.append(date.format(DateTimeFormatter.ofPattern("yyyy/MM")) + "/_stats");
+        builder.append(ofPattern("yyyy/MM").withZone(ZoneId.of("Z")).format(date) + "/_stats");
         break;
       case "year":
-        builder.append(date.format(DateTimeFormatter.ofPattern("yyyy")) + "/_stats");
+        builder.append(ofPattern("yyyy/").withZone(ZoneId.of("Z")).format(date) + "/_stats");
         break;
       case "all-time":
         builder.append("_stats");
@@ -148,25 +176,32 @@ public class StatsFirebaseRestRepository extends FirebaseRestRepository implemen
 
     String path = builder.toString();
 
-    firebase.setValue(path, stats);
+    client.setValue(path, stats);
   }
 
   @Override
-  public void updatePeriodEndDate(String companyId, String employeeId, String performanceName, String period, ZonedDateTime periodEndDate) {
-    logger.debug("Started updateValue employee period performance stats period end date: " + companyId + ", " + employeeId + ", " + performanceName + ", " + period + ", " + periodEndDate.format(ISO_ZONED_DATE_TIME));
+  public void updatePeriodEndDate(String companyId, String employeeId, String performanceName, String period, Instant date, Long periodEndDate) {
+    checkArgument(!isNullOrEmpty(companyId));
+    checkArgument(!isNullOrEmpty(employeeId));
+    checkArgument(!isNullOrEmpty(performanceName));
+    checkArgument(!isNullOrEmpty(period));
+    checkNotNull(date);
+    checkNotNull(periodEndDate);
+
+    logger.debug("Started update employee period performance stats period end date: " + companyId + ", " + employeeId + ", " + performanceName + ", " + period + ", " + periodEndDate);
 
     StringBuilder builder = new StringBuilder();
     builder.append("company_employee_performances/" + companyId + "/" + employeeId + "/" + performanceName + "/");
 
     switch (period) {
       case "day":
-        builder.append(periodEndDate.format(DateTimeFormatter.ofPattern("yyyy/MM/dd")) + "/_stats");
+        builder.append(ofPattern("yyyy/MM/dd").withZone(ZoneId.of("Z")).format(date) + "/_stats");
         break;
       case "month":
-        builder.append(periodEndDate.format(DateTimeFormatter.ofPattern("yyyy/MM")) + "/_stats");
+        builder.append(ofPattern("yyyy/MM").withZone(ZoneId.of("Z")).format(date) + "/_stats");
         break;
       case "year":
-        builder.append(periodEndDate.format(DateTimeFormatter.ofPattern("yyyy")) + "/_stats");
+        builder.append(ofPattern("yyyy").withZone(ZoneId.of("Z")).format(date) + "/_stats");
         break;
       case "all-time":
         builder.append("_stats");
@@ -177,14 +212,18 @@ public class StatsFirebaseRestRepository extends FirebaseRestRepository implemen
 
     String path = builder.toString();
 
-    firebase.updateValue(path, of("period_end_date", periodEndDate.format(ISO_ZONED_DATE_TIME)));
+    client.updateValue(path, of("period_end_date", periodEndDate));
   }
 
   @Override
   public void deleteAll(String companyId, String employeeId, String performanceName) {
+    checkArgument(!isNullOrEmpty(companyId));
+    checkArgument(!isNullOrEmpty(employeeId));
+    checkArgument(!isNullOrEmpty(performanceName));
+
     String path = "company_employee_performances/" + companyId + "/" + employeeId + "/" + performanceName;
 
-    Map<String, Object> value = firebase.getValueAsMap(path, true);
+    Map<String, Object> value = client.getValueAsMap(path, true);
 
     if (value == null || "null".equals(value)) {
       return;
@@ -195,43 +234,43 @@ public class StatsFirebaseRestRepository extends FirebaseRestRepository implemen
 
       // all-time
       if ("_stats".equals(key)) {
-        firebase.deleteValue(_path);
+        client.deleteValue(_path);
 
         continue;
       }
 
-      Map<String, Object> _value = firebase.getValueAsMap(_path, true);
+      Map<String, Object> _value = client.getValueAsMap(_path, true);
 
       for (String _key : _value.keySet()) {
         String __path = _path + "/" + _key;
 
         // year
         if ("_stats".equals(_key)) {
-          firebase.deleteValue(__path);
+          client.deleteValue(__path);
 
           continue;
         }
 
-        Map<String, Object> __value = firebase.getValueAsMap(__path, true);
+        Map<String, Object> __value = client.getValueAsMap(__path, true);
 
         for (String __key : __value.keySet()) {
           String ___path = __path + "/" + __key;
 
           // month
           if ("_stats".equals(__key)) {
-            firebase.deleteValue(___path);
+            client.deleteValue(___path);
 
             continue;
           }
 
-          Map<String, Object> ___value = firebase.getValueAsMap(___path, true);
+          Map<String, Object> ___value = client.getValueAsMap(___path, true);
 
           for (String ___key : ___value.keySet()) {
             String ____path = ___path + "/" + ___key;
 
             // day
             if ("_stats".equals(___key)) {
-              firebase.deleteValue(____path);
+              client.deleteValue(____path);
 
               continue;
             }

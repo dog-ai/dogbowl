@@ -15,6 +15,9 @@ import net.jodah.failsafe.RetryPolicy;
 import java.util.Map;
 import java.util.SortedMap;
 
+import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.base.Preconditions.checkNotNull;
+import static com.google.common.base.Strings.isNullOrEmpty;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
 import static net.jodah.failsafe.Failsafe.with;
@@ -31,6 +34,9 @@ public class FirebaseRestClient {
   private final String token;
   
   public FirebaseRestClient(String url, String token) {
+    checkArgument(!isNullOrEmpty(url));
+    checkArgument(!isNullOrEmpty(token));
+
     this.url = url;
     this.token = token;
 
@@ -39,12 +45,15 @@ public class FirebaseRestClient {
     this.client = Client.create(config);
 
     this.retryPolicy = new RetryPolicy()
-            .retryIf((ClientResponse response) -> response.getStatus() >= 500)
+            .retryIf((ClientResponse response) -> response == null || response.getStatus() >= 500)
             .withBackoff(4, 32, SECONDS)
             .withMaxRetries(5);
   }
 
   public void setValue(String path, Map value) {
+    checkArgument(!isNullOrEmpty(path));
+    checkNotNull(value);
+
     with(retryPolicy).get(() -> client.resource(url)
             .path(String.format(PATH_FORMAT, path))
             .queryParam(AUTH_PARAM_NAME, token)
@@ -53,6 +62,9 @@ public class FirebaseRestClient {
   }
 
   public void updateValue(String path, Map value) {
+    checkArgument(!isNullOrEmpty(path));
+    checkNotNull(value);
+
     with(retryPolicy).get(() -> client.resource(url)
             .path(String.format(PATH_FORMAT, path))
             .queryParam(AUTH_PARAM_NAME, token)
@@ -66,6 +78,9 @@ public class FirebaseRestClient {
   }
 
   public Map getValueAsMap(String path, Boolean shallow) {
+    checkArgument(!isNullOrEmpty(path));
+    checkNotNull(shallow);
+
     return with(retryPolicy).get(() -> client.resource(url)
             .path(String.format(PATH_FORMAT, path))
             .queryParam(AUTH_PARAM_NAME, token)
@@ -75,6 +90,8 @@ public class FirebaseRestClient {
   }
 
   public String getValueAsString(String path) {
+    checkArgument(!isNullOrEmpty(path));
+
     return with(retryPolicy).get(() -> client.resource(url)
             .path(String.format(PATH_FORMAT, path))
             .queryParam(AUTH_PARAM_NAME, token)
@@ -82,7 +99,19 @@ public class FirebaseRestClient {
             .getEntity(String.class);
   }
 
+  public Long getValueAsLong(String path) {
+    checkArgument(!isNullOrEmpty(path));
+
+    return with(retryPolicy).get(() -> client.resource(url)
+            .path(String.format(PATH_FORMAT, path))
+            .queryParam(AUTH_PARAM_NAME, token)
+            .get(ClientResponse.class))
+            .getEntity(Long.class);
+  }
+
   public void deleteValue(String path) {
+    checkArgument(!isNullOrEmpty(path));
+
     with(retryPolicy).get(() -> client.resource(url)
             .path(String.format(PATH_FORMAT, path))
             .queryParam(AUTH_PARAM_NAME, token)

@@ -8,6 +8,8 @@ import java.util.Map;
 
 import ai.dog.bowl.repository.CompanyRepository;
 
+import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.base.Strings.isNullOrEmpty;
 import static org.slf4j.LoggerFactory.getLogger;
 
 public class CompanyFirebaseRestRepository extends FirebaseRestRepository implements CompanyRepository {
@@ -15,9 +17,11 @@ public class CompanyFirebaseRestRepository extends FirebaseRestRepository implem
 
   @Override
   public Map<String, Object> findById(String companyId) {
+    checkArgument(!isNullOrEmpty(companyId));
+
     String path = "companies/" + companyId;
 
-    Map<String, Object> value = firebase.getValueAsMap(path);
+    Map<String, Object> value = client.getValueAsMap(path);
 
     if (value == null | "null".equals(value)) {
       return null;

@@ -10,7 +10,7 @@ import org.slf4j.Logger;
 
 import java.util.List;
 
-import ai.dog.bowl.client.RollbarClient;
+import ai.dog.bowl.log.RollbarLogger;
 import ai.dog.bowl.stats.presence.UpdatePresenceStats;
 
 import static com.google.common.base.Preconditions.checkArgument;
@@ -19,11 +19,9 @@ import static org.slf4j.LoggerFactory.getLogger;
 
 public class PerformancePresenceStatsUpdate {
   private static final Logger logger = getLogger(PerformancePresenceStatsUpdate.class);
+  private static final RollbarLogger rollbar = new RollbarLogger();
 
-  private static final RollbarClient rollbar = new RollbarClient();
-
-  private static final UpdatePresenceStats stats = new UpdatePresenceStats();
-
+  private static final UpdatePresenceStats updatePresenceStats = new UpdatePresenceStats();
 
   public static void main(String[] args) throws Exception {
     checkArgument(args != null && args.length > 0);
@@ -31,9 +29,9 @@ public class PerformancePresenceStatsUpdate {
 
     String companyId = args[0];
 
-    logger.info("Started update of presence stats for company " + companyId);
+    logger.info("Started update of presence updatePresenceStats for company " + companyId);
 
-    List<String> employeeIds = stats.getEmployees(companyId);
+    List<String> employeeIds = updatePresenceStats.findEmployeesByCompanyId(companyId);
 
     logger.info("Updating " + employeeIds.size() + " employees: " + employeeIds);
 
@@ -47,9 +45,9 @@ public class PerformancePresenceStatsUpdate {
     context.parallelize(employeeIds)
       .foreach(employeeId -> {
         try {
-          logger.info("Started update of presence stats for employee " + employeeId);
+          logger.info("Started update of presence updatePresenceStats for employee " + employeeId);
 
-          stats.updateEmployeeStats(companyId, employeeId, "presence");
+          updatePresenceStats.updateEmployeeStats(companyId, employeeId, "presence");
 
         } catch (Throwable error) {
           logger.error(error.getMessage());
@@ -62,7 +60,6 @@ public class PerformancePresenceStatsUpdate {
 
     context.stop();
 
-    logger.info("Finished update of presence stats for company " + companyId);
-
+    logger.info("Finished update of presence updatePresenceStats for company " + companyId);
   }
 }
