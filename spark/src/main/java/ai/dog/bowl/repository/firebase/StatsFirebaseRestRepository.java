@@ -4,9 +4,17 @@
 
 package ai.dog.bowl.repository.firebase;
 
+import com.github.benmanes.caffeine.cache.CacheWriter;
+import com.github.benmanes.caffeine.cache.Caffeine;
+import com.github.benmanes.caffeine.cache.LoadingCache;
+import com.github.benmanes.caffeine.cache.RemovalCause;
+
 import java.time.Instant;
 import java.time.ZoneId;
 import java.util.Map;
+
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
 import ai.dog.bowl.repository.StatsRepository;
 
@@ -19,6 +27,23 @@ import static org.slf4j.LoggerFactory.getLogger;
 
 public class StatsFirebaseRestRepository extends FirebaseRestRepository implements StatsRepository {
   private static final org.slf4j.Logger logger = getLogger(StatsFirebaseRestRepository.class);
+
+  private static LoadingCache<String, Map> cache;
+
+  public StatsFirebaseRestRepository() {
+    cache = Caffeine.newBuilder()
+            .writer(new CacheWriter<String, Map>() {
+              @Override
+              public void write(@Nonnull String path, @Nonnull Map stats) {
+                client.setValue(path, stats);
+              }
+
+              @Override
+              public void delete(@Nonnull String s, @Nullable Map map, @Nonnull RemovalCause removalCause) {
+              }
+            })
+            .build(client::getValueAsMap);
+  }
 
   @Override
   public Instant retrieveAllTimePeriodEndDate(String companyId, String employeeId, String performanceName) {
@@ -90,7 +115,7 @@ public class StatsFirebaseRestRepository extends FirebaseRestRepository implemen
 
     String path = builder.toString();
 
-    Map value = client.getValueAsMap(path);
+    Map value = cache.get(path);
 
     if (value == null || "null".equals(null)) {
       return null;
@@ -176,7 +201,7 @@ public class StatsFirebaseRestRepository extends FirebaseRestRepository implemen
 
     String path = builder.toString();
 
-    client.setValue(path, stats);
+    cache.put(path, stats);
   }
 
   @Override
@@ -263,6 +288,7 @@ public class StatsFirebaseRestRepository extends FirebaseRestRepository implemen
             continue;
           }
 
+          /*
           Map<String, Object> ___value = client.getValueAsMap(___path, true);
 
           for (String ___key : ___value.keySet()) {
@@ -275,6 +301,7 @@ public class StatsFirebaseRestRepository extends FirebaseRestRepository implemen
               continue;
             }
           }
+          */
         }
       }
     }

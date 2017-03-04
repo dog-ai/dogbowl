@@ -29,7 +29,7 @@ public class PerformancePresenceStatsUpdate {
 
     String companyId = args[0];
 
-    logger.info("Started update of presence updatePresenceStats for company " + companyId);
+    logger.info("Started update of presence stats for company " + companyId);
 
     List<String> employeeIds = updatePresenceStats.findEmployeesByCompanyId(companyId);
 
@@ -45,7 +45,7 @@ public class PerformancePresenceStatsUpdate {
     context.parallelize(employeeIds)
       .foreach(employeeId -> {
         try {
-          logger.info("Started update of presence updatePresenceStats for employee " + employeeId);
+          logger.info("Started update of presence stats for employee " + employeeId);
 
           updatePresenceStats.updateEmployeeStats(companyId, employeeId, "presence");
 
@@ -54,12 +54,12 @@ public class PerformancePresenceStatsUpdate {
 
           rollbar.error(error);
         } finally {
-          logger.info("Finished update of employee " + employeeId);
+          logger.info("Finished update of presence stats for employee " + employeeId);
         }
       });
 
     context.stop();
 
-    logger.info("Finished update of presence updatePresenceStats for company " + companyId);
+    logger.info("Finished update of presence stats for company " + companyId);
   }
 }

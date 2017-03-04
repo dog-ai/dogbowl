@@ -6,7 +6,6 @@ package ai.dog.bowl.stats.presence;
 
 import java.time.Instant;
 import java.time.ZoneId;
-import java.time.ZonedDateTime;
 import java.time.temporal.TemporalAdjusters;
 import java.util.AbstractMap;
 import java.util.Map;
@@ -24,23 +23,7 @@ public class ComputePeriodStats {
       return oldPeriodStats;
     }
 
-    // TODO: temp
-    Instant oldPeriodEndDate = null;
-    if (oldPeriodStats != null && oldPeriodStats.containsKey("period_end_date") && oldPeriodStats.get("period_end_date") instanceof String) {
-      oldPeriodEndDate = ZonedDateTime.parse((String) oldPeriodStats.get("period_end_date")).toInstant();
-    } else if (oldPeriodStats != null && oldPeriodStats.containsKey("period_end_date")) {
-      oldPeriodEndDate = Instant.ofEpochSecond((Long) oldPeriodStats.get("period_end_date"));
-    }
-
-    // TODO: temp
-    Instant oldPeriodStartDate = null;
-    if (oldPeriodStats != null && oldPeriodStats.containsKey("period_start_date") && oldPeriodStats.get("period_start_date") instanceof String) {
-      oldPeriodStartDate = ZonedDateTime.parse((String) oldPeriodStats.get("period_start_date")).toInstant();
-    } else if (oldPeriodStats != null && oldPeriodStats.containsKey("period_start_date")) {
-      oldPeriodStartDate = Instant.ofEpochSecond((Long) oldPeriodStats.get("period_start_date"));
-    }
-
-    if (oldPeriodStats != null && oldPeriodStats.containsKey("period_end_date") && Instant.ofEpochSecond((Long) dayStats.get("period_start_date")).isBefore(oldPeriodEndDate)) {
+    if (oldPeriodStats != null && oldPeriodStats.containsKey("period_end_date") && Instant.ofEpochSecond((Long) dayStats.get("period_start_date")).isBefore(Instant.ofEpochSecond((Long) oldPeriodStats.get("period_end_date")))) {
       return oldPeriodStats;
     }
 
@@ -54,13 +37,13 @@ public class ComputePeriodStats {
     switch (period) {
       case "month":
         // are we starting a new month
-        if (oldPeriodStats != null && oldPeriodStats.containsKey("period_start_date") && oldPeriodStartDate.atZone(ZoneId.of("Z")).getMonthValue() != date.atZone(ZoneId.of("Z")).getMonthValue()) {
+        if (oldPeriodStats != null && oldPeriodStats.containsKey("period_start_date") && Instant.ofEpochSecond((Long) oldPeriodStats.get("period_start_date")).atZone(ZoneId.of("Z")).getMonthValue() != date.atZone(ZoneId.of("Z")).getMonthValue()) {
           newPeriodStats = null;
         }
         break;
       case "year":
         // are we starting a new year
-        if (oldPeriodStats != null && oldPeriodStats.containsKey("period_start_date") && oldPeriodStartDate.atZone(ZoneId.of("Z")).getYear() != date.atZone(ZoneId.of("Z")).getYear()) {
+        if (oldPeriodStats != null && oldPeriodStats.containsKey("period_start_date") && Instant.ofEpochSecond((Long) oldPeriodStats.get("period_start_date")).atZone(ZoneId.of("Z")).getYear() != date.atZone(ZoneId.of("Z")).getYear()) {
           newPeriodStats = null;
         }
         break;

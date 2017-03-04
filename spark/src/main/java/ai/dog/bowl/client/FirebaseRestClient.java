@@ -115,6 +115,6 @@ public class FirebaseRestClient {
     with(retryPolicy).get(() -> client.resource(url)
             .path(String.format(PATH_FORMAT, path))
             .queryParam(AUTH_PARAM_NAME, token)
-            .delete(String.class));
+            .delete(ClientResponse.class));
   }
 }

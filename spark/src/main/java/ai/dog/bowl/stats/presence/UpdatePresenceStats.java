@@ -8,8 +8,6 @@ import org.slf4j.Logger;
 
 import java.time.Instant;
 import java.time.ZoneId;
-import java.time.ZonedDateTime;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -51,8 +49,7 @@ public class UpdatePresenceStats {
   }
 
   public void updateEmployeeStats(final String companyId, final String employeeId, final String performanceName) {
-    Instant periodEndDate = statsRepository
-            .retrieveAllTimePeriodEndDate(companyId, employeeId, performanceName);
+    Instant periodEndDate = statsRepository.retrieveAllTimePeriodEndDate(companyId, employeeId, performanceName);
 
     if (periodEndDate == null) {
       Map<String, Object> company = companyRepository.findById(companyId);
@@ -66,11 +63,13 @@ public class UpdatePresenceStats {
         return;
       }
 
+      statsRepository.deleteAll(companyId, employeeId, performanceName);
+
       periodEndDate = periodEndDate.minus(1, DAYS);
     }
 
     Instant updatedDate = statsRepository.retrieveAllTimeUpdatedDate(companyId, employeeId, performanceName);
-    if (updatedDate != null && periodEndDate.isBefore(updatedDate)) {
+    if (updatedDate != null && periodEndDate.isBefore(updatedDate) && periodEndDate.until(updatedDate, DAYS) > 40) {
       periodEndDate = updatedDate.atZone(ZoneId.of("Z")).toLocalDate()
               .atTime(23, 59, 59)
               .atZone(ZoneId.of("Z")).toInstant();
@@ -89,13 +88,10 @@ public class UpdatePresenceStats {
       return;
     }
 
-    logger.info("Updating employee presence stats from: " + startDate + " until " + endDate);
+    logger.info("Updating employee presence stats from: " + startDate.atZone(ZoneId.of("Z")) + " until " + endDate.atZone(ZoneId.of("Z")));
 
     Instant currentDate = startDate;
 
-    Map<String, Map<String, Object>> cachedStats = new HashMap<>();
-    cachedStats.put("month", null);
-    cachedStats.put("year", null);
     while (currentDate.isBefore(endDate)) {
       try {
         Map<String, Map> performance = performanceRepository.findAllByNameAndDate(companyId, employeeId, performanceName, currentDate);
@@ -111,7 +107,7 @@ public class UpdatePresenceStats {
 
         // compute and update all other stats periods
         for (String period : new String[]{"month", "year", "all-time"}) {
-          updateEmployeePeriodStats(companyId, employeeId, performanceName, period, cachedStats, dayStats, currentDate);
+          updateEmployeePeriodStats(companyId, employeeId, performanceName, period, dayStats, currentDate);
         }
 
         logger.info("Updated presence stats with performance from date: " + currentDate);
@@ -131,30 +127,10 @@ public class UpdatePresenceStats {
     return dayStats;
   }
 
-  private void updateEmployeePeriodStats(final String companyId, final String employeeId, final String performanceName, String period, Map<String, Map<String, Object>> cachedStats, Map<String, Object> dayStats, Instant date) {
-    if (!cachedStats.containsKey(period)) {
-      Map<String, Object> oldStats = statsRepository.retrieve(companyId, employeeId, performanceName, period, date);
-
-      // TODO: temp
-      Instant oldPeriodEndDate = null;
-      if (oldStats != null && oldStats.containsKey("period_end_date") && oldStats.get("period_end_date") instanceof String) {
-        oldPeriodEndDate = ZonedDateTime.parse((String) oldStats.get("period_end_date")).toInstant();
-      } else if (oldStats != null && oldStats.containsKey("period_end_date")) {
-        oldPeriodEndDate = Instant.ofEpochSecond((Long) oldStats.get("period_end_date"));
-      }
-
-      if (oldStats != null && oldStats.containsKey("period_end_date") && (oldPeriodEndDate.isBefore(date) || oldPeriodEndDate.equals(date))) {
-        cachedStats.put(period, oldStats);
-      } else {
-        cachedStats.put(period, null);
-      }
-    }
-
-    Map<String, Object> oldStats = cachedStats.get(period);
+  private void updateEmployeePeriodStats(final String companyId, final String employeeId, final String performanceName, String period, Map<String, Object> dayStats, Instant date) {
+    Map<String, Object> oldStats = statsRepository.retrieve(companyId, employeeId, performanceName, period, date);
     Map<String, Object> newStats = computePeriodStats.compute(dayStats, oldStats, period, date);
 
     statsRepository.update(companyId, employeeId, performanceName, period, date, newStats);
-
-    cachedStats.put(period, newStats);
   }
 }
