@@ -4,37 +4,40 @@
 
 package ai.dog.bowl.stats.presence;
 
-import com.google.common.collect.ImmutableMap;
+import com.clearspring.analytics.util.Lists;
 
 import org.junit.Before;
 import org.junit.Test;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.Map;
-import java.util.TreeMap;
 
+import ai.dog.bowl.model.performance.Presence;
+
+import static java.time.Instant.ofEpochSecond;
 import static org.assertj.core.api.Assertions.assertThat;
 
-public class ComputeDayStatsTest {
+public class ComputePresenceDayStatsTest {
 
-  private ComputeDayStats target;
+  private ComputePresenceDayStats target;
 
   @Before
   public void setUp() {
-    target = new ComputeDayStats();
+    target = new ComputePresenceDayStats();
   }
 
   @Test
   public void shouldComputeEmployeeStatsForDay() {
-    Instant date = Instant.ofEpochSecond(1457395200);
+    Instant date = ofEpochSecond(1457395200);
 
-    Map<String, Map> performance = new TreeMap<>();
-    performance.put("my-presence-1", ImmutableMap.of("created_date", 1457409600, "is_present", true));
-    performance.put("my-presence-2", ImmutableMap.of("created_date", 1457424000, "is_present", false));
-    performance.put("my-presence-3", ImmutableMap.of("created_date", 1457467200, "is_present", true));
-    performance.put("my-presence-4", ImmutableMap.of("created_date", 1457474400, "is_present", false));
+    List<Presence> presences = Lists.newArrayList();
+    presences.add(new Presence("my-presence-1", ofEpochSecond(1457409600), true));
+    presences.add(new Presence("my-presence-2", ofEpochSecond(1457424000), false));
+    presences.add(new Presence("my-presence-3", ofEpochSecond(1457467200), true));
+    presences.add(new Presence("my-presence-4", ofEpochSecond(1457474400), false));
 
-    Map<String, Object> dayStats = target.compute(performance, date);
+    Map<String, Object> dayStats = target.compute(presences, date);
 
     assertThat(dayStats).isNotNull();
     assertThat(dayStats).isNotEmpty();
@@ -51,11 +54,11 @@ public class ComputeDayStatsTest {
 
   @Test
   public void shouldNotComputeEmployeeStatsForDayWhenNoPerformanceAvailable() {
-    Instant date = Instant.ofEpochSecond(1457395200);
+    Instant date = ofEpochSecond(1457395200);
 
-    Map<String, Map> performance = new TreeMap<>();
+    List<Presence> presences = Lists.newArrayList();
 
-    Map<String, Object> dayStats = target.compute(performance, date);
+    Map<String, Object> dayStats = target.compute(presences, date);
 
     assertThat(dayStats).isNull();
   }

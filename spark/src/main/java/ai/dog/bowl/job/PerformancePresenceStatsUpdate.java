@@ -47,7 +47,7 @@ public class PerformancePresenceStatsUpdate {
         try {
           logger.info("Started update of presence stats for employee " + employeeId);
 
-          updatePresenceStats.updateEmployeeStats(companyId, employeeId, "presence");
+          updatePresenceStats.updateEmployeeStats(companyId, employeeId);
 
         } catch (Throwable error) {
           logger.error(error.getMessage());

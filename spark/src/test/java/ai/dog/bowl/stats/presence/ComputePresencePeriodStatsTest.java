@@ -14,13 +14,13 @@ import java.util.TreeMap;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-public class ComputePeriodStatsTest {
+public class ComputePresencePeriodStatsTest {
 
-  private ComputePeriodStats target;
+  private ComputePresencePeriodStats target;
 
   @Before
   public void setUp() {
-    target = new ComputePeriodStats();
+    target = new ComputePresencePeriodStats();
   }
 
   @Test

@@ -16,7 +16,7 @@ import static java.lang.Integer.MIN_VALUE;
 import static java.lang.Math.max;
 import static java.lang.Math.min;
 
-public class ComputePeriodStats {
+public class ComputePresencePeriodStats {
   public Map<String, Object> compute(final Map<String, Object> dayStats, final Map<String, Object> oldPeriodStats, final String period, final Instant date) {
     if (dayStats == null || dayStats.isEmpty()) {
       oldPeriodStats.put("period_end_date", date.atZone(ZoneId.of("Z")).toLocalDate().atTime(23, 59, 59).atZone(ZoneId.of("Z")).toInstant().toEpochMilli() / 1000);

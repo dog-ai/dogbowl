@@ -78,15 +78,20 @@ public class FirebaseRestClient {
   }
 
   public Map getValueAsMap(String path, Boolean shallow) {
+    return (SortedMap) getValueAsClass(path, shallow, SortedMap.class);
+  }
+
+  public Object getValueAsClass(String path, Boolean shallow, Class clazz) {
     checkArgument(!isNullOrEmpty(path));
     checkNotNull(shallow);
+    checkNotNull(clazz);
 
     return with(retryPolicy).get(() -> client.resource(url)
             .path(String.format(PATH_FORMAT, path))
             .queryParam(AUTH_PARAM_NAME, token)
             .queryParam("shallow", shallow.toString())
             .get(ClientResponse.class))
-            .getEntity(SortedMap.class);
+            .getEntity(clazz);
   }
 
   public String getValueAsString(String path) {
