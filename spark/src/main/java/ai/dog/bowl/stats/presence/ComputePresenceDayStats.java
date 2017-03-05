@@ -16,6 +16,7 @@ import java.util.Map;
 import ai.dog.bowl.model.performance.Presence;
 
 import static com.google.common.base.Preconditions.checkNotNull;
+import static java.time.temporal.ChronoUnit.SECONDS;
 
 public class ComputePresenceDayStats {
   public Map<String, Object> compute(List<Presence> presences, Instant date) {
@@ -38,8 +39,8 @@ public class ComputePresenceDayStats {
     stats.put("created_date", now);
     stats.put("updated_date", now);
     stats.put("period", "day");
-    stats.put("period_start_date", date.atZone(ZoneId.of("Z")).toLocalDate().atStartOfDay(ZoneId.of("Z")).toInstant().toEpochMilli() / 1000);
-    stats.put("period_end_date", date.atZone(ZoneId.of("Z")).toLocalDate().atTime(23, 59, 59).atZone(ZoneId.of("Z")).toInstant().toEpochMilli() / 1000);
+    stats.put("period_start_date", startOfDay(date).toEpochMilli() / 1000);
+    stats.put("period_end_date", endOfDay(date).toEpochMilli() / 1000);
 
     return stats;
   }
@@ -88,18 +89,18 @@ public class ComputePresenceDayStats {
         Instant next;
         if (i + 1 < _presences.size()) {
           next = _presences.get(i + 1).getCreatedDate();
-          diff = (int) ChronoUnit.SECONDS.between(_presences.get(i).getCreatedDate(), next);
+          diff = (int) SECONDS.between(_presences.get(i).getCreatedDate(), next);
         } else {
-          next = _presences.get(i).getCreatedDate().atZone(ZoneId.of("Z")).toLocalDate().atTime(23, 59, 59).atZone(ZoneId.of("Z")).toInstant();
-          diff = (int) ChronoUnit.SECONDS.between(_presences.get(i).getCreatedDate(), next);
+          next = endOfDay(_presences.get(i).getCreatedDate());
+          diff = (int) SECONDS.between(_presences.get(i).getCreatedDate(), next);
         }
         totalDuration += diff;
 
       } else if (i == 0) {
         // first presence is not present...assume that the first presence is the beginning of the day
         Instant previous = _presences.get(i).getCreatedDate();
-        previous = previous.atZone(ZoneId.of("Z")).toLocalDate().atStartOfDay(ZoneId.of("Z")).toInstant();
-        diff = (int) ChronoUnit.SECONDS.between(previous, _presences.get(i).getCreatedDate());
+        previous = startOfDay(previous);
+        diff = (int) SECONDS.between(previous, _presences.get(i).getCreatedDate());
 
         totalDuration += diff;
       }
@@ -119,7 +120,7 @@ public class ComputePresenceDayStats {
     Instant createdDate = first.isPresent() ? first.getCreatedDate() : startOfDay(first.getCreatedDate());
     Instant startOfDay = startOfDay(createdDate);
 
-    return (int) ChronoUnit.SECONDS.between(startOfDay, createdDate);
+    return (int) SECONDS.between(startOfDay, createdDate);
   }
 
   private int computeEndTime(List<Presence> presences) {
@@ -133,7 +134,7 @@ public class ComputePresenceDayStats {
     Instant endDate = last.isPresent() ? endOfDay(last.getCreatedDate()) : last.getCreatedDate();
     Instant startOfDay = startOfDay(endDate);
 
-    return (int) ChronoUnit.SECONDS.between(startOfDay, endDate);
+    return (int) SECONDS.between(startOfDay, endDate);
   }
 
   private Instant endOfDay(Instant instant) {

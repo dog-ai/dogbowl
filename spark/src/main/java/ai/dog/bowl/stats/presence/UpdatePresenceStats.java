@@ -76,8 +76,14 @@ public class UpdatePresenceStats {
               .atZone(ZoneId.of("Z")).toInstant();
     }
 
-    Instant startDate = periodEndDate.plus(1, DAYS);
-    Instant endDate = Instant.now().atZone(ZoneId.of("Z")).toLocalDate()
+    Instant startDate = periodEndDate
+            .plus(1, DAYS)
+            .atZone(ZoneId.of("Z")).toLocalDate()
+            .atStartOfDay()
+            .atZone(ZoneId.of("Z")).toInstant();
+    Instant endDate = Instant.now()
+            .minus(1, DAYS)
+            .atZone(ZoneId.of("Z")).toLocalDate()
             .atTime(23, 59, 59)
             .atZone(ZoneId.of("Z")).toInstant();
 
