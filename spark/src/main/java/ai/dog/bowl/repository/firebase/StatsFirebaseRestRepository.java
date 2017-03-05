@@ -122,6 +122,12 @@ public class StatsFirebaseRestRepository extends FirebaseRestRepository implemen
     }
 
     // TODO: temp. fix
+    if (value.get("created_date") instanceof Integer) {
+      value.put("created_date", ((Integer) value.get("created_date")).longValue());
+    }
+    if (value.get("updated_date") instanceof Integer) {
+      value.put("updated_date", ((Integer) value.get("updated_date")).longValue());
+    }
     if (value.get("period_start_date") instanceof Integer) {
       value.put("period_start_date", ((Integer) value.get("period_start_date")).longValue());
     }
@@ -190,7 +196,7 @@ public class StatsFirebaseRestRepository extends FirebaseRestRepository implemen
         builder.append(ofPattern("yyyy/MM").withZone(ZoneId.of("Z")).format(date) + "/_stats");
         break;
       case "year":
-        builder.append(ofPattern("yyyy/").withZone(ZoneId.of("Z")).format(date) + "/_stats");
+        builder.append(ofPattern("yyyy").withZone(ZoneId.of("Z")).format(date) + "/_stats");
         break;
       case "all-time":
         builder.append("_stats");

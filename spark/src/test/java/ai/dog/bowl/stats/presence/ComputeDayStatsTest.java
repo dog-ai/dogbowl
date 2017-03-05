@@ -26,13 +26,13 @@ public class ComputeDayStatsTest {
 
   @Test
   public void shouldComputeEmployeeStatsForDay() {
-    Instant date = Instant.parse("2016-03-08T00:00:00Z");
+    Instant date = Instant.ofEpochSecond(1457395200);
 
     Map<String, Map> performance = new TreeMap<>();
-    performance.put("my-presence-1", ImmutableMap.of("created_date", "2016-03-08T04:00:00Z", "is_present", true));
-    performance.put("my-presence-2", ImmutableMap.of("created_date", "2016-03-08T08:00:00Z", "is_present", false));
-    performance.put("my-presence-3", ImmutableMap.of("created_date", "2016-03-08T20:00:00Z", "is_present", true));
-    performance.put("my-presence-4", ImmutableMap.of("created_date", "2016-03-08T22:00:00Z", "is_present", false));
+    performance.put("my-presence-1", ImmutableMap.of("created_date", 1457409600, "is_present", true));
+    performance.put("my-presence-2", ImmutableMap.of("created_date", 1457424000, "is_present", false));
+    performance.put("my-presence-3", ImmutableMap.of("created_date", 1457467200, "is_present", true));
+    performance.put("my-presence-4", ImmutableMap.of("created_date", 1457474400, "is_present", false));
 
     Map<String, Object> dayStats = target.compute(performance, date);
 
@@ -51,7 +51,7 @@ public class ComputeDayStatsTest {
 
   @Test
   public void shouldNotComputeEmployeeStatsForDayWhenNoPerformanceAvailable() {
-    Instant date = Instant.parse("2016-03-08T00:00:00Z");
+    Instant date = Instant.ofEpochSecond(1457395200);
 
     Map<String, Map> performance = new TreeMap<>();
 

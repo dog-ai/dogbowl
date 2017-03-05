@@ -42,6 +42,12 @@ public class PerformanceFirebaseRestRepository extends FirebaseRestRepository im
       value.remove("_stats");
     }
 
+    /*
+    for (String key : (Set<String>) value.keySet()) {
+      Integer createdDate = (Integer) ((Map<String, Object>) value.get(key)).get("created_date");
+      ((Map<String, Object>) value.get(key)).put("created_date", createdDate.longValue());
+    }*/
+
     return value;
   }
 

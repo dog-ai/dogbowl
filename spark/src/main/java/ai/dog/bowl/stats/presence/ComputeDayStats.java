@@ -6,7 +6,6 @@ package ai.dog.bowl.stats.presence;
 
 import java.time.Instant;
 import java.time.ZoneId;
-import java.time.ZonedDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -69,8 +68,8 @@ public class ComputeDayStats {
 
         if (i > 0 && i + 1 < keys.length) {
           Map<String, Object> next = (Map<String, Object>) performance.get(keys[i + 1]);
-          Instant nextCreatedDate = ZonedDateTime.parse((String) next.get("created_date")).toInstant();
-          Instant curCreatedDate = ZonedDateTime.parse((String) cur.get("created_date")).toInstant();
+          Instant nextCreatedDate = Instant.ofEpochSecond((Integer) next.get("created_date"));
+          Instant curCreatedDate = Instant.ofEpochSecond((Integer) cur.get("created_date"));
           boolean longerThan90min = ChronoUnit.MINUTES.between(curCreatedDate, nextCreatedDate) >= 90;
           if (longerThan90min) {
             _presences.add(cur);
@@ -88,19 +87,19 @@ public class ComputeDayStats {
       if ((Boolean) _presences.get(i).get("is_present")) {
         Instant next;
         if (i + 1 < _presences.size()) {
-          next = ZonedDateTime.parse((String) _presences.get(i + 1).get("created_date")).toInstant();
-          diff = (int) ChronoUnit.SECONDS.between(ZonedDateTime.parse((String) _presences.get(i).get("created_date")).toInstant(), next);
+          next = Instant.ofEpochSecond((Integer) _presences.get(i + 1).get("created_date"));
+          diff = (int) ChronoUnit.SECONDS.between(Instant.ofEpochSecond((Integer) _presences.get(i).get("created_date")), next);
         } else {
-          next = ZonedDateTime.parse((String) _presences.get(i).get("created_date")).toLocalDate().atTime(23, 59, 59).atZone(ZoneId.of("Z")).toInstant();
-          diff = (int) ChronoUnit.SECONDS.between(ZonedDateTime.parse((String) _presences.get(i).get("created_date")).toInstant(), next);
+          next = Instant.ofEpochSecond((Integer) _presences.get(i).get("created_date")).atZone(ZoneId.of("Z")).toLocalDate().atTime(23, 59, 59).atZone(ZoneId.of("Z")).toInstant();
+          diff = (int) ChronoUnit.SECONDS.between(Instant.ofEpochSecond((Integer) _presences.get(i).get("created_date")), next);
         }
         totalDuration += diff;
 
       } else if (i == 0) {
         // first presence is not present...assume that the first presence is the beginning of the day
-        Instant previous = ZonedDateTime.parse((String) _presences.get(i).get("created_date")).toInstant();
+        Instant previous = Instant.ofEpochSecond((Integer) _presences.get(i).get("created_date"));
         previous = previous.atZone(ZoneId.of("Z")).toLocalDate().atStartOfDay(ZoneId.of("Z")).toInstant();
-        diff = (int) ChronoUnit.SECONDS.between(previous, ZonedDateTime.parse((String) _presences.get(i).get("created_date")).toInstant());
+        diff = (int) ChronoUnit.SECONDS.between(previous, Instant.ofEpochSecond((Integer) _presences.get(i).get("created_date")));
 
         totalDuration += diff;
       }
@@ -117,7 +116,7 @@ public class ComputeDayStats {
     String[] keys = performance.keySet().toArray(new String[performance.keySet().size()]);
 
     if (!performance.isEmpty() && (Boolean) performance.get(keys[0]).get("is_present")) {
-      Instant createdDate = ZonedDateTime.parse((String) performance.get(keys[0]).get("created_date")).toInstant();
+      Instant createdDate = Instant.ofEpochSecond((Integer) performance.get(keys[0]).get("created_date"));
       Instant startOfDay = createdDate.atZone(ZoneId.of("Z")).toLocalDate().atStartOfDay(ZoneId.of("Z")).toInstant();
       startTime = (int) ChronoUnit.SECONDS.between(startOfDay, createdDate);
     }
@@ -135,11 +134,11 @@ public class ComputeDayStats {
     if (!performance.isEmpty()) {
       Instant endDate;
       if ((Boolean) performance.get(keys[keys.length - 1]).get("is_present")) {
-        endDate = ZonedDateTime.parse((String) performance.get(keys[keys.length - 1]).get("created_date")).toLocalDate().atTime(23, 59, 59).atZone(ZoneId.of("Z")).toInstant();
+        endDate = Instant.ofEpochSecond((Integer) performance.get(keys[keys.length - 1]).get("created_date")).atZone(ZoneId.of("Z")).toLocalDate().atTime(23, 59, 59).atZone(ZoneId.of("Z")).toInstant();
         Instant startOfDay = endDate.atZone(ZoneId.of("Z")).toLocalDate().atStartOfDay(ZoneId.of("Z")).toInstant();
         endTime = (int) ChronoUnit.SECONDS.between(startOfDay, endDate);
       } else {
-        endDate = ZonedDateTime.parse((String) performance.get(keys[keys.length - 1]).get("created_date")).toInstant();
+        endDate = Instant.ofEpochSecond((Integer) performance.get(keys[keys.length - 1]).get("created_date"));
         Instant startOfDay = endDate.atZone(ZoneId.of("Z")).toLocalDate().atStartOfDay(ZoneId.of("Z")).toInstant();
         endTime = (int) ChronoUnit.SECONDS.between(startOfDay, endDate);
       }
